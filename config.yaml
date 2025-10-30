@@ -1,20 +1,74 @@
-# Categories to filter (empty list = all CS categories)
-# Options: Artificial Intelligence, Computation and Language, Machine Learning, etc.
-categories:
-  ["Computer Vision and Pattern Recognition", "Artificial Intelligence"]
+# ArxivDigest-Reimagined Configuration
+# Three-stage progressive filtering pipeline
 
-# Model to use for relevancy scoring
-# Examples: deepseek-chat, gpt-4, gpt-4-turbo
-model: "deepseek-chat"
+# ============================================
+# arXiv Query Settings
+# ============================================
+arxiv:
+  categories:
+    - "Computer Vision and Pattern Recognition"
+    - "Artificial Intelligence"
+    - "Robotics"
+  max_results: 0
 
-# Relevance score threshold (1-10)
-# Papers scoring below this will be filtered out
-threshold: 7
+# ============================================
+# LLM Settings
+# ============================================
+llm:
+  model: "deepseek-chat"
+  api_key: ${API_KEY}
+  base_url: "https://api.deepseek.com"
+  temperature: 0.0
+  max_concurrent: 10
+  timeout: 60
 
-# Filtering criteria (natural language)
-# Leave empty to skip filtering and list all papers
-standard: |
+# ============================================
+# Three-Stage Filtering
+# ============================================
+user_prompt: |
   和 VLN (Vision-Language Navigation) / VLA (Vision Language Action) 相关；
-  其中和“无图目标导航”任务相关的工作优先级更高；
+  其中和"无图目标导航"任务相关的工作优先级更高；
   重点关注室内场景下的导航任务；
   用中文回答原因。
+
+stage1:
+  enabled: true
+  threshold: 0.5
+
+stage2:
+  enabled: true
+  threshold: 0.7
+
+stage3:
+  enabled: true
+  threshold: 0.8
+  max_text_chars: 8000
+  custom_fields:
+    - "key_innovations"
+    - "technical_approach"
+    - "limitations"
+    - "potential_impact"
+
+# ============================================
+# Cache Settings
+# ============================================
+cache:
+  dir: ".cache"
+  size_limit_mb: 1024
+  expire_days: 30
+
+# ============================================
+# Crawler Settings
+# ============================================
+crawler:
+  max_concurrent: 5
+  timeout: 30
+  max_retries: 3
+  retry_delay: 1.0
+
+# ============================================
+# Output Settings
+# ============================================
+output:
+  format: "html"
+  file: "digest.html"
