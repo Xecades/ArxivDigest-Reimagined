@@ -1,65 +1,41 @@
 import { z } from "zod";
 
-// ============================================
-// Message Schema
-// ============================================
-
-export const MessageSchema = z.object({
+// Message schema
+const MessageSchema = z.object({
     role: z.enum(["system", "user", "assistant"]),
     content: z.string(),
 });
 
-export type Message = z.infer<typeof MessageSchema>;
-
-// ============================================
-// Usage & Cost Schemas
-// ============================================
-
-export const UsageSchema = z
+// Usage info schema
+const UsageSchema = z
     .object({
-        prompt_tokens: z.number().nullable().optional(),
-        completion_tokens: z.number().nullable().optional(),
-        total_tokens: z.number().nullable().optional(),
+        prompt_tokens: z.number().nullable(),
+        completion_tokens: z.number().nullable(),
+        total_tokens: z.number().nullable(),
     })
-    .nullable()
-    .optional();
+    .nullable();
 
-export type Usage = z.infer<typeof UsageSchema>;
-
-// ============================================
-// Stage Result Schemas
-// ============================================
-
-export const BaseStageResultSchema = z.object({
+// Base stage result schema
+const BaseStageResultSchema = z.object({
     pass: z.boolean(),
     score: z.number(),
     reasoning: z.string(),
     messages: z.array(MessageSchema),
     usage: UsageSchema,
-    estimated_cost: z.number().nullable().optional(),
-    estimated_cost_currency: z.string().nullable().optional(),
+    estimated_cost: z.number().nullable(),
+    estimated_cost_currency: z.string().nullable(),
 });
 
-export const Stage1ResultSchema = BaseStageResultSchema;
-
-export const Stage2ResultSchema = BaseStageResultSchema;
-
-export const Stage3ResultSchema = BaseStageResultSchema.extend({
+// Stage 3 result schema (extends base with additional fields)
+const Stage3ResultSchema = BaseStageResultSchema.extend({
     novelty_score: z.number(),
     impact_score: z.number(),
     quality_score: z.number(),
     custom_fields: z.record(z.any()).optional(),
 });
 
-export type Stage1Result = z.infer<typeof Stage1ResultSchema>;
-export type Stage2Result = z.infer<typeof Stage2ResultSchema>;
-export type Stage3Result = z.infer<typeof Stage3ResultSchema>;
-
-// ============================================
-// Paper Schema
-// ============================================
-
-export const PaperSchema = z.object({
+// Paper schema
+const PaperSchema = z.object({
     arxiv_id: z.string(),
     title: z.string(),
     authors: z.array(z.string()),
@@ -67,20 +43,15 @@ export const PaperSchema = z.object({
     abstract: z.string(),
     pdf_url: z.string(),
     abs_url: z.string(),
-    published: z.string().optional(),
+    published: z.string(),
     max_stage: z.number(),
-    stage1: Stage1ResultSchema,
-    stage2: Stage2ResultSchema.nullable(),
+    stage1: BaseStageResultSchema,
+    stage2: BaseStageResultSchema.nullable(),
     stage3: Stage3ResultSchema.nullable(),
 });
 
-export type Paper = z.infer<typeof PaperSchema>;
-
-// ============================================
-// Metadata Schema
-// ============================================
-
-export const MetadataSchema = z.object({
+// Metadata schema
+const MetadataSchema = z.object({
     title: z.string(),
     timestamp: z.string(),
     user_prompt: z.string(),
@@ -106,15 +77,17 @@ export const MetadataSchema = z.object({
     }),
 });
 
-export type Metadata = z.infer<typeof MetadataSchema>;
-
-// ============================================
-// Digest Data Schema
-// ============================================
-
-export const DigestDataSchema = z.object({
+// Full digest schema
+export const DigestSchema = z.object({
     metadata: MetadataSchema,
     papers: z.array(PaperSchema),
 });
 
-export type DigestData = z.infer<typeof DigestDataSchema>;
+// TypeScript types inferred from schemas
+export type Message = z.infer<typeof MessageSchema>;
+export type UsageInfo = z.infer<typeof UsageSchema>;
+export type BaseStageResult = z.infer<typeof BaseStageResultSchema>;
+export type Stage3Result = z.infer<typeof Stage3ResultSchema>;
+export type Paper = z.infer<typeof PaperSchema>;
+export type Metadata = z.infer<typeof MetadataSchema>;
+export type DigestData = z.infer<typeof DigestSchema>;

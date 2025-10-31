@@ -1,358 +1,275 @@
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
-import { TransitionRoot, TransitionChild, Dialog, DialogPanel, DialogTitle } from "@headlessui/vue";
-import { XMarkIcon, ChevronDownIcon } from "@heroicons/vue/24/solid";
-import type { Paper } from "@/types";
+import { ref, computed, onMounted, onUnmounted } from "vue";
+import type { Paper, Message, UsageInfo } from "@/types/digest";
+import { escapeHtml, formatCost } from "@/utils/formatters";
 
-interface Props {
-    paper: Paper | null;
-    show: boolean;
-}
+const props = defineProps<{
+    paper: Paper;
+}>();
 
-interface Emits {
-    (e: "close"): void;
-}
-
-const props = defineProps<Props>();
-const emit = defineEmits<Emits>();
+const emit = defineEmits<{
+    close: [];
+}>();
 
 const collapsedMessages = ref<Set<string>>(new Set());
 
-const title = computed(() => {
-    if (!props.paper) return "";
-    return props.paper.title.length > 60
-        ? props.paper.title.substring(0, 60) + "..."
-        : props.paper.title;
+// Format title for modal
+const modalTitle = computed(() => {
+    const title = props.paper.title;
+    return title.length > 60 ? title.substring(0, 60) + "..." : title;
 });
 
-function closeModal() {
-    emit("close");
-}
-
-function toggleMessage(messageId: string) {
-    if (collapsedMessages.value.has(messageId)) {
-        collapsedMessages.value.delete(messageId);
+// Toggle message collapse
+function toggleMessage(msgId: string) {
+    if (collapsedMessages.value.has(msgId)) {
+        collapsedMessages.value.delete(msgId);
     } else {
-        collapsedMessages.value.add(messageId);
+        collapsedMessages.value.add(msgId);
     }
 }
 
-function isMessageCollapsed(messageId: string): boolean {
-    return collapsedMessages.value.has(messageId);
-}
-
-function formatUsage(
-    usage: unknown,
-    cost: number | null | undefined,
+// Render usage info
+function renderUsage(
+    usage: UsageInfo,
+    estimatedCost: number | null | undefined,
     currency: string | null | undefined,
 ): string {
-    if (!usage || typeof usage !== "object") return "";
+    if (!usage) return "";
 
-    const u = usage as {
-        prompt_tokens?: number | null;
-        completion_tokens?: number | null;
-        total_tokens?: number | null;
-    };
-
-    const p = u.prompt_tokens != null ? u.prompt_tokens.toLocaleString() : "N/A";
-    const c = u.completion_tokens != null ? u.completion_tokens.toLocaleString() : "N/A";
-    const t = u.total_tokens != null ? u.total_tokens.toLocaleString() : "N/A";
-    const costText = cost != null ? (cost === 0 ? "0.000000" : cost.toFixed(6)) : "N/A";
+    const p = usage.prompt_tokens != null ? usage.prompt_tokens.toLocaleString() : "N/A";
+    const c = usage.completion_tokens != null ? usage.completion_tokens.toLocaleString() : "N/A";
+    const t = usage.total_tokens != null ? usage.total_tokens.toLocaleString() : "N/A";
+    const costText =
+        estimatedCost != null
+            ? estimatedCost === 0
+                ? "0.000000"
+                : formatCost(estimatedCost)
+            : "N/A";
     const costWithCurrency =
         costText === "N/A" ? "N/A" : currency ? `${currency} ${costText}` : costText;
 
     return `Tokens: ${p} + ${c} = ${t} · Cost: ${costWithCurrency}`;
 }
 
-// Reset collapsed messages when paper changes
-watch(
-    () => props.paper,
-    () => {
-        collapsedMessages.value.clear();
-    },
-);
+// Format message content
+function formatMessageContent(msg: Message): string {
+    if (msg.role === "assistant") {
+        return `<pre style="margin: 0; white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 0.9em;">${escapeHtml(msg.content)}</pre>`;
+    }
+    return escapeHtml(msg.content);
+}
+
+// Handle click outside modal
+function handleBackdropClick(e: MouseEvent) {
+    if ((e.target as HTMLElement).classList.contains("modal")) {
+        emit("close");
+    }
+}
+
+// Handle escape key
+function handleEscape(e: KeyboardEvent) {
+    if (e.key === "Escape") {
+        emit("close");
+    }
+}
+
+// Lock body scroll when modal is open
+onMounted(() => {
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleEscape);
+});
+
+onUnmounted(() => {
+    document.body.style.overflow = "";
+    window.removeEventListener("keydown", handleEscape);
+});
 </script>
 
 <template>
-    <TransitionRoot appear :show="show" as="template">
-        <Dialog as="div" @close="closeModal" class="relative z-50">
-            <TransitionChild
-                as="template"
-                enter="duration-300 ease-out"
-                enter-from="opacity-0"
-                enter-to="opacity-100"
-                leave="duration-200 ease-in"
-                leave-from="opacity-100"
-                leave-to="opacity-0"
-            >
-                <div class="fixed inset-0 bg-black/50" />
-            </TransitionChild>
-
-            <div class="fixed inset-0 overflow-y-auto">
-                <div class="flex min-h-full items-center justify-center p-4">
-                    <TransitionChild
-                        as="template"
-                        enter="duration-300 ease-out"
-                        enter-from="opacity-0 scale-95"
-                        enter-to="opacity-100 scale-100"
-                        leave="duration-200 ease-in"
-                        leave-from="opacity-100 scale-100"
-                        leave-to="opacity-0 scale-95"
-                    >
-                        <DialogPanel
-                            class="w-full max-w-4xl transform overflow-hidden rounded-lg bg-white shadow-xl transition-all"
-                        >
-                            <!-- Header -->
-                            <div
-                                class="bg-gradient-to-r from-primary to-primary-dark text-white px-6 py-5 flex justify-between items-center"
-                            >
-                                <DialogTitle class="text-lg font-semibold">
-                                    LLM Conversations - {{ title }}
-                                </DialogTitle>
-                                <button
-                                    @click="closeModal"
-                                    class="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
-                                >
-                                    <XMarkIcon class="w-6 h-6" />
-                                </button>
-                            </div>
-
-                            <!-- Body -->
-                            <div class="p-6 max-h-[70vh] overflow-y-auto">
-                                <div v-if="!paper" class="text-center text-gray-500 py-10">
-                                    No paper selected
-                                </div>
-                                <div v-else>
-                                    <!-- Stage 1 -->
-                                    <div v-if="paper.stage1?.messages?.length" class="mb-6">
-                                        <div
-                                            class="bg-gradient-to-r from-primary to-primary-dark text-white px-4 py-2 rounded-lg mb-4 flex justify-between items-center"
-                                        >
-                                            <span class="font-semibold"
-                                                >Stage 1: Quick Screening</span
-                                            >
-                                            <span class="text-lg">
-                                                Score: {{ paper.stage1.score.toFixed(2) }}
-                                                {{ paper.stage1.pass ? "✅" : "❌" }}
-                                            </span>
-                                        </div>
-                                        <div
-                                            v-if="paper.stage1.usage"
-                                            class="text-sm text-gray-600 mb-3 px-3 py-2 bg-gray-50 rounded border-l-3 border-primary"
-                                        >
-                                            {{
-                                                formatUsage(
-                                                    paper.stage1.usage,
-                                                    paper.stage1.estimated_cost,
-                                                    paper.stage1.estimated_cost_currency,
-                                                )
-                                            }}
-                                        </div>
-                                        <div
-                                            v-for="(msg, idx) in paper.stage1.messages"
-                                            :key="`stage1-${idx}`"
-                                            :class="[
-                                                'mb-4 p-4 rounded-lg border-l-4',
-                                                msg.role === 'user' && 'bg-blue-50 border-primary',
-                                                msg.role === 'assistant' &&
-                                                    'bg-gray-50 border-primary-dark',
-                                                msg.role === 'system' &&
-                                                    'bg-yellow-50 border-yellow-400',
-                                            ]"
-                                        >
-                                            <div class="flex justify-between items-center mb-2">
-                                                <span
-                                                    class="font-semibold text-sm uppercase tracking-wide"
-                                                    :class="[
-                                                        msg.role === 'user' && 'text-primary',
-                                                        msg.role === 'assistant' &&
-                                                            'text-primary-dark',
-                                                        msg.role === 'system' && 'text-yellow-600',
-                                                    ]"
-                                                >
-                                                    {{ msg.role }}
-                                                </span>
-                                                <button
-                                                    @click="toggleMessage(`stage1-${idx}`)"
-                                                    class="text-gray-500 hover:text-gray-700"
-                                                >
-                                                    <ChevronDownIcon
-                                                        :class="[
-                                                            'w-5 h-5 transition-transform',
-                                                            isMessageCollapsed(`stage1-${idx}`) &&
-                                                                '-rotate-90',
-                                                        ]"
-                                                    />
-                                                </button>
-                                            </div>
-                                            <div
-                                                v-show="!isMessageCollapsed(`stage1-${idx}`)"
-                                                class="text-gray-700 whitespace-pre-wrap leading-relaxed text-sm"
-                                            >
-                                                {{ msg.content }}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Stage 2 -->
-                                    <div v-if="paper.stage2?.messages?.length" class="mb-6">
-                                        <div
-                                            class="bg-gradient-to-r from-primary to-primary-dark text-white px-4 py-2 rounded-lg mb-4 flex justify-between items-center"
-                                        >
-                                            <span class="font-semibold"
-                                                >Stage 2: Refined Screening</span
-                                            >
-                                            <span class="text-lg">
-                                                Score: {{ paper.stage2.score.toFixed(2) }}
-                                                {{ paper.stage2.pass ? "✅" : "❌" }}
-                                            </span>
-                                        </div>
-                                        <div
-                                            v-if="paper.stage2.usage"
-                                            class="text-sm text-gray-600 mb-3 px-3 py-2 bg-gray-50 rounded border-l-3 border-primary"
-                                        >
-                                            {{
-                                                formatUsage(
-                                                    paper.stage2.usage,
-                                                    paper.stage2.estimated_cost,
-                                                    paper.stage2.estimated_cost_currency,
-                                                )
-                                            }}
-                                        </div>
-                                        <div
-                                            v-for="(msg, idx) in paper.stage2.messages"
-                                            :key="`stage2-${idx}`"
-                                            :class="[
-                                                'mb-4 p-4 rounded-lg border-l-4',
-                                                msg.role === 'user' && 'bg-blue-50 border-primary',
-                                                msg.role === 'assistant' &&
-                                                    'bg-gray-50 border-primary-dark',
-                                                msg.role === 'system' &&
-                                                    'bg-yellow-50 border-yellow-400',
-                                            ]"
-                                        >
-                                            <div class="flex justify-between items-center mb-2">
-                                                <span
-                                                    class="font-semibold text-sm uppercase tracking-wide"
-                                                    :class="[
-                                                        msg.role === 'user' && 'text-primary',
-                                                        msg.role === 'assistant' &&
-                                                            'text-primary-dark',
-                                                        msg.role === 'system' && 'text-yellow-600',
-                                                    ]"
-                                                >
-                                                    {{ msg.role }}
-                                                </span>
-                                                <button
-                                                    @click="toggleMessage(`stage2-${idx}`)"
-                                                    class="text-gray-500 hover:text-gray-700"
-                                                >
-                                                    <ChevronDownIcon
-                                                        :class="[
-                                                            'w-5 h-5 transition-transform',
-                                                            isMessageCollapsed(`stage2-${idx}`) &&
-                                                                '-rotate-90',
-                                                        ]"
-                                                    />
-                                                </button>
-                                            </div>
-                                            <div
-                                                v-show="!isMessageCollapsed(`stage2-${idx}`)"
-                                                class="text-gray-700 whitespace-pre-wrap leading-relaxed text-sm"
-                                            >
-                                                {{ msg.content }}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Stage 3 -->
-                                    <div v-if="paper.stage3?.messages?.length" class="mb-6">
-                                        <div
-                                            class="bg-gradient-to-r from-primary to-primary-dark text-white px-4 py-2 rounded-lg mb-4 flex justify-between items-center"
-                                        >
-                                            <span class="font-semibold"
-                                                >Stage 3: Deep Analysis</span
-                                            >
-                                            <span class="text-lg">
-                                                Score: {{ paper.stage3.score.toFixed(2) }}
-                                                {{ paper.stage3.pass ? "✅" : "❌" }}
-                                            </span>
-                                        </div>
-                                        <div
-                                            v-if="paper.stage3.usage"
-                                            class="text-sm text-gray-600 mb-3 px-3 py-2 bg-gray-50 rounded border-l-3 border-primary"
-                                        >
-                                            {{
-                                                formatUsage(
-                                                    paper.stage3.usage,
-                                                    paper.stage3.estimated_cost,
-                                                    paper.stage3.estimated_cost_currency,
-                                                )
-                                            }}
-                                        </div>
-                                        <div
-                                            v-for="(msg, idx) in paper.stage3.messages"
-                                            :key="`stage3-${idx}`"
-                                            :class="[
-                                                'mb-4 p-4 rounded-lg border-l-4',
-                                                msg.role === 'user' && 'bg-blue-50 border-primary',
-                                                msg.role === 'assistant' &&
-                                                    'bg-gray-50 border-primary-dark',
-                                                msg.role === 'system' &&
-                                                    'bg-yellow-50 border-yellow-400',
-                                            ]"
-                                        >
-                                            <div class="flex justify-between items-center mb-2">
-                                                <span
-                                                    class="font-semibold text-sm uppercase tracking-wide"
-                                                    :class="[
-                                                        msg.role === 'user' && 'text-primary',
-                                                        msg.role === 'assistant' &&
-                                                            'text-primary-dark',
-                                                        msg.role === 'system' && 'text-yellow-600',
-                                                    ]"
-                                                >
-                                                    {{ msg.role }}
-                                                </span>
-                                                <button
-                                                    @click="toggleMessage(`stage3-${idx}`)"
-                                                    class="text-gray-500 hover:text-gray-700"
-                                                >
-                                                    <ChevronDownIcon
-                                                        :class="[
-                                                            'w-5 h-5 transition-transform',
-                                                            isMessageCollapsed(`stage3-${idx}`) &&
-                                                                '-rotate-90',
-                                                        ]"
-                                                    />
-                                                </button>
-                                            </div>
-                                            <div
-                                                v-show="!isMessageCollapsed(`stage3-${idx}`)"
-                                                class="text-gray-700 whitespace-pre-wrap leading-relaxed text-sm"
-                                            >
-                                                {{ msg.content }}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- No conversation data -->
-                                    <div
-                                        v-if="
-                                            !paper.stage1?.messages?.length &&
-                                            !paper.stage2?.messages?.length &&
-                                            !paper.stage3?.messages?.length
-                                        "
-                                        class="text-center text-gray-500 py-10"
-                                    >
-                                        No conversation data available (all results from cache)
-                                    </div>
-                                </div>
-                            </div>
-                        </DialogPanel>
-                    </TransitionChild>
+    <div class="modal show" @click="handleBackdropClick">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <FontAwesomeIcon icon="comments" style="margin-right: 10px" />
+                    LLM Conversations - {{ modalTitle }}
                 </div>
+                <button class="modal-close" @click="emit('close')">
+                    <FontAwesomeIcon icon="times" />
+                </button>
             </div>
-        </Dialog>
-    </TransitionRoot>
+            <div class="modal-body">
+                <!-- Stage 1 -->
+                <div
+                    v-if="paper.stage1.messages && paper.stage1.messages.length > 0"
+                    class="conversation-section"
+                >
+                    <div class="stage-header">
+                        <span>Stage 1: Quick Screening</span>
+                        <span class="stage-score">
+                            Score: {{ paper.stage1.score.toFixed(2) }}
+                            {{ paper.stage1.pass ? "✅" : "❌" }}
+                        </span>
+                    </div>
+                    <div
+                        v-if="paper.stage1.usage"
+                        class="usage-info"
+                        v-html="
+                            renderUsage(
+                                paper.stage1.usage,
+                                paper.stage1.estimated_cost,
+                                paper.stage1.estimated_cost_currency,
+                            )
+                        "
+                    ></div>
+                    <div
+                        v-for="(msg, index) in paper.stage1.messages"
+                        :key="`stage1-${index}`"
+                        class="message"
+                        :class="`message-${msg.role}`"
+                    >
+                        <div class="message-role">
+                            <span>{{ msg.role.charAt(0).toUpperCase() + msg.role.slice(1) }}</span>
+                            <span
+                                class="message-toggle"
+                                :class="{
+                                    collapsed: collapsedMessages.has(`stage1-${index}`),
+                                }"
+                                @click="toggleMessage(`stage1-${index}`)"
+                            >
+                                <FontAwesomeIcon icon="chevron-down" />
+                            </span>
+                        </div>
+                        <div
+                            class="message-content-wrapper"
+                            :class="{
+                                collapsed: collapsedMessages.has(`stage1-${index}`),
+                            }"
+                        >
+                            <div class="message-content" v-html="formatMessageContent(msg)"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stage 2 -->
+                <div
+                    v-if="paper.stage2 && paper.stage2.messages && paper.stage2.messages.length > 0"
+                    class="conversation-section"
+                >
+                    <div class="stage-header">
+                        <span>Stage 2: Refined Screening</span>
+                        <span class="stage-score">
+                            Score: {{ paper.stage2.score.toFixed(2) }}
+                            {{ paper.stage2.pass ? "✅" : "❌" }}
+                        </span>
+                    </div>
+                    <div
+                        v-if="paper.stage2.usage"
+                        class="usage-info"
+                        v-html="
+                            renderUsage(
+                                paper.stage2.usage,
+                                paper.stage2.estimated_cost,
+                                paper.stage2.estimated_cost_currency,
+                            )
+                        "
+                    ></div>
+                    <div
+                        v-for="(msg, index) in paper.stage2.messages"
+                        :key="`stage2-${index}`"
+                        class="message"
+                        :class="`message-${msg.role}`"
+                    >
+                        <div class="message-role">
+                            <span>{{ msg.role.charAt(0).toUpperCase() + msg.role.slice(1) }}</span>
+                            <span
+                                class="message-toggle"
+                                :class="{
+                                    collapsed: collapsedMessages.has(`stage2-${index}`),
+                                }"
+                                @click="toggleMessage(`stage2-${index}`)"
+                            >
+                                <FontAwesomeIcon icon="chevron-down" />
+                            </span>
+                        </div>
+                        <div
+                            class="message-content-wrapper"
+                            :class="{
+                                collapsed: collapsedMessages.has(`stage2-${index}`),
+                            }"
+                        >
+                            <div class="message-content" v-html="formatMessageContent(msg)"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stage 3 -->
+                <div
+                    v-if="paper.stage3 && paper.stage3.messages && paper.stage3.messages.length > 0"
+                    class="conversation-section"
+                >
+                    <div class="stage-header">
+                        <span>Stage 3: Deep Analysis</span>
+                        <span class="stage-score">
+                            Score: {{ paper.stage3.score.toFixed(2) }}
+                            {{ paper.stage3.pass ? "✅" : "❌" }}
+                        </span>
+                    </div>
+                    <div
+                        v-if="paper.stage3.usage"
+                        class="usage-info"
+                        v-html="
+                            renderUsage(
+                                paper.stage3.usage,
+                                paper.stage3.estimated_cost,
+                                paper.stage3.estimated_cost_currency,
+                            )
+                        "
+                    ></div>
+                    <div
+                        v-for="(msg, index) in paper.stage3.messages"
+                        :key="`stage3-${index}`"
+                        class="message"
+                        :class="`message-${msg.role}`"
+                    >
+                        <div class="message-role">
+                            <span>{{ msg.role.charAt(0).toUpperCase() + msg.role.slice(1) }}</span>
+                            <span
+                                class="message-toggle"
+                                :class="{
+                                    collapsed: collapsedMessages.has(`stage3-${index}`),
+                                }"
+                                @click="toggleMessage(`stage3-${index}`)"
+                            >
+                                <FontAwesomeIcon icon="chevron-down" />
+                            </span>
+                        </div>
+                        <div
+                            class="message-content-wrapper"
+                            :class="{
+                                collapsed: collapsedMessages.has(`stage3-${index}`),
+                            }"
+                        >
+                            <div class="message-content" v-html="formatMessageContent(msg)"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- No conversation data -->
+                <p
+                    v-if="
+                        (!paper.stage1.messages || paper.stage1.messages.length === 0) &&
+                        (!paper.stage2 ||
+                            !paper.stage2.messages ||
+                            paper.stage2.messages.length === 0) &&
+                        (!paper.stage3 ||
+                            !paper.stage3.messages ||
+                            paper.stage3.messages.length === 0)
+                    "
+                    style="text-align: center; color: #999; padding: 40px"
+                >
+                    No conversation data available (all results from cache)
+                </p>
+            </div>
+        </div>
+    </div>
 </template>

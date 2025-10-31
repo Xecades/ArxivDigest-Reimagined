@@ -1,170 +1,174 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import type { Paper } from "@/types";
-import { ChevronRightIcon } from "@heroicons/vue/24/solid";
+import type { Paper, BaseStageResult, Stage3Result } from "@/types/digest";
+import { escapeHtml, formatFieldName } from "@/utils/formatters";
 
-interface Props {
+const props = defineProps<{
     paper: Paper;
-}
+}>();
 
-interface Emits {
-    (e: "view-conversation", paperId: string): void;
-}
+const emit = defineEmits<{
+    showConversation: [paper: Paper];
+}>();
 
-const props = defineProps<Props>();
-const emit = defineEmits<Emits>();
+const abstractExpanded = ref(false);
 
-const showAbstract = ref(false);
-
+// Stage badges
 const stageBadges = computed(() => {
     const badges = [];
-    if (props.paper.max_stage >= 1)
-        badges.push({ stage: 1, label: "Stage 1", color: "bg-green-100 text-green-800" });
-    if (props.paper.max_stage >= 2)
-        badges.push({ stage: 2, label: "Stage 2", color: "bg-blue-100 text-blue-800" });
-    if (props.paper.max_stage >= 3)
-        badges.push({ stage: 3, label: "Stage 3", color: "bg-red-100 text-red-800" });
+    if (props.paper.max_stage >= 1) badges.push({ label: "Stage 1", class: "stage-1" });
+    if (props.paper.max_stage >= 2) badges.push({ label: "Stage 2", class: "stage-2" });
+    if (props.paper.max_stage >= 3) badges.push({ label: "Stage 3", class: "stage-3" });
     return badges;
 });
 
-const mainResult = computed(() => {
+// Main result to display
+const mainResult = computed<BaseStageResult | Stage3Result>(() => {
     if (props.paper.stage3) return props.paper.stage3;
     if (props.paper.stage2) return props.paper.stage2;
     return props.paper.stage1;
 });
 
-const showScores = computed(() => props.paper.stage3 !== null);
+// Check if stage 3
+const isStage3 = computed(() => props.paper.stage3 !== null);
 
-const showCustomFields = computed(() => {
-    return (
-        props.paper.stage3?.custom_fields &&
-        Object.keys(props.paper.stage3.custom_fields).length > 0
-    );
-});
+// Check if has abstract (stage 2+)
+const hasAbstract = computed(() => props.paper.stage2 !== null || props.paper.stage3 !== null);
 
+// Toggle abstract
 function toggleAbstract() {
-    showAbstract.value = !showAbstract.value;
+    abstractExpanded.value = !abstractExpanded.value;
 }
 
-function formatFieldName(name: string): string {
-    return name
-        .split("_")
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(" ");
-}
-
-function handleViewConversation() {
-    emit("view-conversation", props.paper.arxiv_id);
-}
+// Custom fields for stage 3
+const customFields = computed(() => {
+    if (isStage3.value && props.paper.stage3?.custom_fields) {
+        return Object.entries(props.paper.stage3.custom_fields);
+    }
+    return [];
+});
 </script>
 
 <template>
-    <div
-        class="bg-white border border-gray-200 rounded-lg p-6 mb-5 transition-all duration-200 hover:shadow-lg hover:-translate-y-1"
-    >
-        <!-- Header -->
-        <div class="flex justify-between items-start gap-4 mb-4">
-            <h2 class="text-xl font-semibold text-gray-900 flex-1">
-                <a
-                    :href="paper.abs_url"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="hover:text-primary transition-colors"
-                >
-                    {{ paper.title }}
-                </a>
-            </h2>
-            <div class="flex gap-2 flex-shrink-0">
+    <div class="paper-card">
+        <div class="paper-header">
+            <div class="paper-title">
+                <a :href="paper.abs_url" target="_blank" v-html="escapeHtml(paper.title)"></a>
+            </div>
+            <div class="stage-badges">
                 <span
                     v-for="badge in stageBadges"
-                    :key="badge.stage"
-                    :class="['px-3 py-1 rounded-full text-xs font-semibold', badge.color]"
+                    :key="badge.label"
+                    class="stage-badge"
+                    :class="badge.class"
                 >
                     {{ badge.label }}
                 </span>
             </div>
         </div>
 
-        <!-- Meta -->
-        <div class="text-sm text-gray-600 mb-4">
-            <div class="mb-2"><strong>Authors:</strong> {{ paper.authors.join(", ") }}</div>
-            <div class="flex flex-wrap gap-2">
-                <strong>Categories:</strong>
-                <span
-                    v-for="category in paper.categories"
-                    :key="category"
-                    class="bg-gray-100 px-2 py-1 rounded text-xs"
-                >
-                    {{ category }}
+        <div class="paper-meta">
+            <div class="authors">
+                <strong><FontAwesomeIcon icon="users" class="meta-icon" />Authors:</strong>
+                {{ paper.authors.join(", ") }}
+            </div>
+            <div class="categories">
+                <strong><FontAwesomeIcon icon="tags" class="meta-icon" />Categories:</strong>
+                <span v-for="cat in paper.categories" :key="cat" class="category-tag">
+                    {{ cat }}
                 </span>
             </div>
         </div>
 
-        <!-- Abstract Toggle (if stage 2+) -->
-        <div v-if="paper.stage2 || paper.stage3" class="mb-4">
-            <button
-                @click="toggleAbstract"
-                class="flex items-center gap-2 text-primary font-semibold text-sm hover:text-primary-dark transition-colors"
-            >
-                <ChevronRightIcon
-                    :class="['w-4 h-4 transition-transform', showAbstract && 'rotate-90']"
-                />
-                <span>Abstract</span>
-            </button>
-            <div v-show="showAbstract" class="mt-3 text-gray-700 leading-relaxed animate-fade-in">
-                {{ paper.abstract }}
-            </div>
-        </div>
+        <button
+            v-if="hasAbstract"
+            class="abstract-toggle"
+            :class="{ expanded: abstractExpanded }"
+            @click="toggleAbstract"
+        >
+            <FontAwesomeIcon
+                icon="chevron-right"
+                class="abstract-toggle-icon"
+                :class="{ expanded: abstractExpanded }"
+            />
+            <span>Abstract</span>
+        </button>
+        <div
+            v-if="hasAbstract"
+            class="paper-abstract"
+            :class="{ expanded: abstractExpanded }"
+            v-html="escapeHtml(paper.abstract)"
+        ></div>
 
-        <!-- Scores (Stage 3) -->
-        <div v-if="showScores && paper.stage3" class="mb-4 flex flex-wrap gap-4">
-            <div
-                v-for="(score, label) in {
-                    Overall: paper.stage3.score,
-                    Novelty: paper.stage3.novelty_score,
-                    Impact: paper.stage3.impact_score,
-                    Quality: paper.stage3.quality_score,
-                }"
-                :key="label"
-                class="flex items-center gap-2"
-            >
-                <span class="font-semibold text-gray-600 text-sm">{{ label }}:</span>
-                <div class="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div v-if="isStage3 && paper.stage3" class="scores">
+            <div class="score-item">
+                <span class="score-label">Overall:</span>
+                <div class="score-bar">
                     <div
-                        class="h-full bg-gradient-to-r from-primary to-primary-dark"
-                        :style="{ width: `${score * 100}%` }"
+                        class="score-fill"
+                        :style="{ width: paper.stage3.score * 100 + '%' }"
                     ></div>
                 </div>
-                <span class="font-bold text-primary text-sm">{{ score.toFixed(2) }}</span>
+                <span class="score-value">{{ paper.stage3.score.toFixed(2) }}</span>
             </div>
-        </div>
-
-        <!-- Reasoning -->
-        <div
-            v-if="mainResult.reasoning"
-            class="mb-4 bg-gray-50 border-l-4 border-primary p-4 rounded"
-        >
-            <div class="font-semibold text-primary mb-2">Analysis:</div>
-            <div class="text-gray-700 leading-relaxed">{{ mainResult.reasoning }}</div>
-        </div>
-
-        <!-- Custom Fields (Stage 3) -->
-        <div v-if="showCustomFields && paper.stage3" class="mb-4">
-            <div v-for="(value, key) in paper.stage3.custom_fields" :key="key" class="mb-3">
-                <div class="font-semibold text-primary text-sm mb-1">
-                    {{ formatFieldName(key) }}:
+            <div class="score-item">
+                <span class="score-label">Novelty:</span>
+                <div class="score-bar">
+                    <div
+                        class="score-fill"
+                        :style="{ width: paper.stage3.novelty_score * 100 + '%' }"
+                    ></div>
                 </div>
-                <div class="text-gray-700 leading-relaxed">{{ value }}</div>
+                <span class="score-value">{{ paper.stage3.novelty_score.toFixed(2) }}</span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">Impact:</span>
+                <div class="score-bar">
+                    <div
+                        class="score-fill"
+                        :style="{ width: paper.stage3.impact_score * 100 + '%' }"
+                    ></div>
+                </div>
+                <span class="score-value">{{ paper.stage3.impact_score.toFixed(2) }}</span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">Quality:</span>
+                <div class="score-bar">
+                    <div
+                        class="score-fill"
+                        :style="{ width: paper.stage3.quality_score * 100 + '%' }"
+                    ></div>
+                </div>
+                <span class="score-value">{{ paper.stage3.quality_score.toFixed(2) }}</span>
             </div>
         </div>
 
-        <!-- View Conversation Button -->
-        <button
-            @click="handleViewConversation"
-            class="bg-gradient-to-r from-primary to-primary-dark text-white px-4 py-2 rounded-full text-sm font-semibold hover:shadow-lg transition-all duration-200 flex items-center gap-2"
-        >
-            <span>💬</span>
+        <div v-if="mainResult.reasoning" class="reasoning">
+            <div class="reasoning-title">Analysis:</div>
+            <div class="reasoning-text" v-html="escapeHtml(mainResult.reasoning)"></div>
+        </div>
+
+        <div v-if="customFields.length > 0" class="custom-fields">
+            <div v-for="[key, value] in customFields" :key="key" class="custom-field">
+                <div class="custom-field-title">{{ formatFieldName(key) }}:</div>
+                <div class="custom-field-content" v-html="escapeHtml(String(value))"></div>
+            </div>
+        </div>
+
+        <button class="conversation-btn" @click="emit('showConversation', paper)">
+            <FontAwesomeIcon icon="comments" />
             <span>View LLM Conversations</span>
         </button>
     </div>
 </template>
+
+<style scoped>
+.meta-icon {
+    margin-right: 5px;
+    width: 16px;
+    line-height: 1em;
+    text-align: center;
+    color: #667eea;
+    vertical-align: middle;
+}
+</style>

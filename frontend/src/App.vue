@@ -1,146 +1,171 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
-import { useDigestData } from "@/composables";
-import { DigestHeader, StageSelector, PaperCard, ConversationModal } from "@/components";
-import type { Paper } from "@/types";
+import { loadDigestData } from "@/utils/digestLoader";
+import type { DigestData, Paper } from "@/types/digest";
+import { formatDate } from "@/utils/formatters";
+import PaperCard from "@/components/PaperCard.vue";
+import ConversationModal from "@/components/ConversationModal.vue";
 
-const {
-    data,
-    loading,
-    error,
-    filteredPapers,
-    defaultStage,
-    loadData,
-    setStage,
-    currentStage,
-    getStageCount,
-} = useDigestData();
-
+const digestData = ref<DigestData | null>(null);
+const loading = ref(true);
+const error = ref<string | null>(null);
+const currentStage = ref<string>("all");
 const selectedPaper = ref<Paper | null>(null);
 const showModal = ref(false);
 
+// Load data on mount
 onMounted(async () => {
-    await loadData();
-    if (data.value) {
-        setStage(defaultStage.value);
+    try {
+        digestData.value = await loadDigestData();
+        // Set default stage to highest non-empty stage
+        if (digestData.value.metadata.stats.stage3_passed > 0) {
+            currentStage.value = "3";
+        } else if (digestData.value.metadata.stats.stage2_passed > 0) {
+            currentStage.value = "2";
+        } else if (digestData.value.metadata.stats.stage1_passed > 0) {
+            currentStage.value = "1";
+        }
+    } catch (e) {
+        error.value = e instanceof Error ? e.message : "Failed to load digest data";
+    } finally {
+        loading.value = false;
     }
 });
 
-const counts = computed(() => ({
-    all: getStageCount("all"),
-    stage1: getStageCount("1"),
-    stage2: getStageCount("2"),
-    stage3: getStageCount("3"),
-}));
+// Filtered papers based on current stage
+const filteredPapers = computed(() => {
+    if (!digestData.value) return [];
+    if (currentStage.value === "all") return digestData.value.papers;
 
-function handleStageChange(stage: "all" | "1" | "2" | "3") {
-    setStage(stage);
+    const minStage = parseInt(currentStage.value);
+    return digestData.value.papers.filter((paper) => paper.max_stage >= minStage);
+});
+
+// Stage names for display
+const stageName = computed(() => {
+    const names: Record<string, string> = {
+        all: "All Papers",
+        "1": "Stage 1+",
+        "2": "Stage 2+",
+        "3": "Stage 3",
+    };
+    return names[currentStage.value] || "All Papers";
+});
+
+// Format timestamp
+const formattedTimestamp = computed(() => {
+    if (!digestData.value) return "";
+    return formatDate(digestData.value.metadata.timestamp);
+});
+
+// Show conversation modal
+function showConversation(paper: Paper) {
+    selectedPaper.value = paper;
+    showModal.value = true;
 }
 
-function handleViewConversation(paperId: string) {
-    const paper = filteredPapers.value.find((p) => p.arxiv_id === paperId);
-    if (paper) {
-        selectedPaper.value = paper;
-        showModal.value = true;
-    }
-}
-
+// Close conversation modal
 function closeModal() {
     showModal.value = false;
+    selectedPaper.value = null;
 }
 </script>
 
 <template>
-    <div class="min-h-screen p-4 sm:p-6 lg:p-8">
-        <div class="max-w-7xl mx-auto bg-white rounded-xl shadow-2xl overflow-hidden">
-            <!-- Loading State -->
-            <div v-if="loading" class="flex items-center justify-center h-96">
-                <div class="text-center">
-                    <div
-                        class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
-                    ></div>
-                    <p class="mt-4 text-gray-600">Loading digest data...</p>
-                </div>
+    <div v-if="error" class="error">
+        <FontAwesomeIcon icon="times-circle" style="margin-right: 10px" />
+        Error: {{ error }}
+    </div>
+    <div v-else-if="digestData" class="container">
+        <header>
+            <h1>
+                🎓
+                {{ digestData.metadata.title }}
+            </h1>
+            <div class="timestamp">Generated on {{ formattedTimestamp }}</div>
+        </header>
+
+        <div class="controls">
+            <div class="stage-selector">
+                <button
+                    class="stage-btn"
+                    :class="{ active: currentStage === 'all' }"
+                    @click="currentStage = 'all'"
+                >
+                    All Papers ({{ digestData.metadata.stats.total_papers }})
+                </button>
+                <button
+                    class="stage-btn"
+                    :class="{ active: currentStage === '1' }"
+                    @click="currentStage = '1'"
+                >
+                    Stage 1+ ({{ digestData.metadata.stats.stage1_passed }})
+                </button>
+                <button
+                    class="stage-btn"
+                    :class="{ active: currentStage === '2' }"
+                    @click="currentStage = '2'"
+                >
+                    Stage 2+ ({{ digestData.metadata.stats.stage2_passed }})
+                </button>
+                <button
+                    class="stage-btn"
+                    :class="{ active: currentStage === '3' }"
+                    @click="currentStage = '3'"
+                >
+                    Stage 3 ({{ digestData.metadata.stats.stage3_passed }})
+                </button>
             </div>
 
-            <!-- Error State -->
-            <div v-else-if="error" class="flex items-center justify-center h-96">
-                <div class="text-center text-red-600">
-                    <svg
-                        class="mx-auto h-16 w-16 mb-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                    </svg>
-                    <p class="text-xl font-semibold">Error loading data</p>
-                    <p class="mt-2 text-gray-600">{{ error.message }}</p>
+            <div class="stats">
+                <div class="stat">
+                    <span>Total:</span>
+                    <span class="stat-value">{{ filteredPapers.length }}</span>
+                </div>
+                <div class="stat">
+                    <span>Showing:</span>
+                    <span class="stat-value">{{ stageName }}</span>
                 </div>
             </div>
-
-            <!-- Main Content -->
-            <template v-else-if="data">
-                <DigestHeader :metadata="data.metadata" />
-
-                <StageSelector
-                    :current-stage="currentStage"
-                    :counts="counts"
-                    @change="handleStageChange"
-                />
-
-                <div class="px-6 py-8">
-                    <!-- Stats Bar -->
-                    <div class="flex justify-between items-center mb-6 text-sm text-gray-600">
-                        <div>
-                            Total:
-                            <span class="font-bold text-primary">{{ filteredPapers.length }}</span>
-                        </div>
-                        <div>
-                            Showing:
-                            <span class="font-semibold">{{
-                                currentStage === "all" ? "All Papers" : `Stage ${currentStage}+`
-                            }}</span>
-                        </div>
-                    </div>
-
-                    <!-- Papers List -->
-                    <div v-if="filteredPapers.length > 0">
-                        <PaperCard
-                            v-for="paper in filteredPapers"
-                            :key="paper.arxiv_id"
-                            :paper="paper"
-                            @view-conversation="handleViewConversation"
-                        />
-                    </div>
-
-                    <!-- Empty State -->
-                    <div v-else class="text-center py-20">
-                        <div class="text-6xl mb-4">📭</div>
-                        <h2 class="text-2xl font-semibold text-gray-700 mb-2">No papers found</h2>
-                        <p class="text-gray-500">Try selecting a different filter</p>
-                    </div>
-                </div>
-
-                <!-- Footer -->
-                <footer class="bg-gray-50 py-6 px-6 text-center text-sm text-gray-600 border-t">
-                    <p class="mb-2 font-semibold">
-                        {{ data.metadata.title }} | Three-Stage Progressive Filtering System
-                    </p>
-                    <p>
-                        Stage 1: Title + Categories | Stage 2: + Authors + Abstract | Stage 3: +
-                        Full Paper Analysis
-                    </p>
-                </footer>
-
-                <!-- Conversation Modal -->
-                <ConversationModal :paper="selectedPaper" :show="showModal" @close="closeModal" />
-            </template>
         </div>
+
+        <div class="papers-container">
+            <div v-if="filteredPapers.length === 0" class="no-papers">
+                <div class="no-papers-icon">📭</div>
+                <h2>No papers found</h2>
+                <p>Try selecting a different filter</p>
+            </div>
+            <PaperCard
+                v-for="paper in filteredPapers"
+                :key="paper.arxiv_id"
+                :paper="paper"
+                @show-conversation="showConversation"
+            />
+        </div>
+
+        <footer>
+            <p>{{ digestData.metadata.title }} | Three-Stage Progressive Filtering System</p>
+            <p>
+                Stage 1: Title + Categories | Stage 2: + Authors + Abstract | Stage 3: + Full Paper
+                Analysis
+            </p>
+        </footer>
+
+        <ConversationModal
+            v-if="showModal && selectedPaper"
+            :paper="selectedPaper"
+            @close="closeModal"
+        />
     </div>
 </template>
+
+<style scoped>
+.error {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-size: 1.5em;
+    color: #ff6b6b;
+}
+</style>
