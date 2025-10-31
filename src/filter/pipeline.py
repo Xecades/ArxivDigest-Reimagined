@@ -114,7 +114,7 @@ class FilterPipeline:
         logger.info("🔍 STAGE 1: Quick Screening (Title + Categories)")
         logger.info("-" * 60)
         stage1_results = await self.stage1.filter_batch(papers, user_prompt)
-        stage1_passed = [paper for paper, result in stage1_results if result.pass_filter]
+        stage1_passed = [paper for paper, result in stage1_results if result["pass_filter"]]
 
         logger.info(f"\n✅ Stage 1 passed: {len(stage1_passed)}/{len(papers)} papers\n")
 
@@ -126,7 +126,7 @@ class FilterPipeline:
             logger.info("🔍 STAGE 2: Refined Screening (+ Authors + Abstract)")
             logger.info("-" * 60)
             stage2_results = await self.stage2.filter_batch(stage1_passed, user_prompt)
-            stage2_passed = [paper for paper, result in stage2_results if result.pass_filter]
+            stage2_passed = [paper for paper, result in stage2_results if result["pass_filter"]]
 
             logger.info(f"\n✅ Stage 2 passed: {len(stage2_passed)}/{len(stage1_passed)} papers\n")
         else:
@@ -141,7 +141,7 @@ class FilterPipeline:
             logger.info("-" * 60)
             stage3_results = await self.stage3.filter_batch(stage2_passed, user_prompt)
             stage3_passed = [
-                paper for paper, result in stage3_results if result and result.pass_filter
+                paper for paper, result in stage3_results if result and result["pass_filter"]
             ]
 
             logger.info(f"\n✅ Stage 3 passed: {len(stage3_passed)}/{len(stage2_passed)} papers\n")

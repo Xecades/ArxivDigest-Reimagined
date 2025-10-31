@@ -8,7 +8,12 @@ from loguru import logger
 from openai import AsyncOpenAI
 from pydantic import BaseModel
 
-from .schemas import Stage1Result, Stage2Result, Stage3Result
+from .cost_calculator import (
+    CostInfo,
+    UsageInfo,
+    calculate_deepseek_cost,
+    extract_usage_from_response,
+)
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -72,7 +77,7 @@ class AsyncLLMClient:
         messages: list[dict[str, str]],
         response_model: type[T],
         **kwargs: Any,
-    ) -> T:
+    ) -> tuple[T, UsageInfo | None, CostInfo | None]:
         """
         Get structured completion from LLM.
 
@@ -82,7 +87,7 @@ class AsyncLLMClient:
             **kwargs: Additional arguments to pass to instructor
 
         Returns:
-            Structured response matching response_model
+            Tuple of (response, usage_info, cost_info)
         """
         async with self.semaphore:
             try:
@@ -101,12 +106,31 @@ class AsyncLLMClient:
                     **kwargs,
                 )
 
+                # Extract usage information from response
+                usage = extract_usage_from_response(response)
+
+                # Calculate cost using DeepSeek pricing
+                cost_info = calculate_deepseek_cost(usage)
+
+                # Log usage and cost
+                if usage:
+                    prompt = usage.get("prompt_tokens", 0)
+                    completion = usage.get("completion_tokens", 0)
+                    total = usage.get("total_tokens", 0)
+                    if cost_info:
+                        cost_str = f"{cost_info.get('currency', 'N/A')} {cost_info.get('estimated_cost', 0):.6f}"
+                    else:
+                        cost_str = "N/A"
+                    logger.info(
+                        f"LLM usage: prompt={prompt}, completion={completion}, total={total}, est_cost={cost_str}"
+                    )
+
                 # Log the response
                 logger.debug(f"=== LLM Response ({response_model.__name__}) ===")
                 logger.debug(f"{response}")
                 logger.debug("=" * 60)
 
-                return response  # type: ignore
+                return response, usage, cost_info  # type: ignore
 
             except Exception as e:
                 logger.error(f"LLM completion failed: {e}")
@@ -117,7 +141,7 @@ class AsyncLLMClient:
         batch_messages: list[list[dict[str, str]]],
         response_model: type[T],
         **kwargs: Any,
-    ) -> list[T]:
+    ) -> list[tuple[T, UsageInfo | None, CostInfo | None]]:
         """
         Get structured completions for multiple requests in parallel.
 
@@ -127,13 +151,13 @@ class AsyncLLMClient:
             **kwargs: Additional arguments to pass to instructor
 
         Returns:
-            List of structured responses
+            List of tuples (response, usage_info, cost_info)
         """
         tasks = [self.complete(messages, response_model, **kwargs) for messages in batch_messages]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Filter out exceptions and log them
-        valid_results: list[T] = []
+        valid_results: list[tuple[T, UsageInfo | None, CostInfo | None]] = []
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 logger.error(f"Batch request {i} failed: {result}")
@@ -162,7 +186,7 @@ class AsyncLLMClient:
         system_message = """You are an expert at quickly screening academic papers for relevance.
 Your task is to determine if a paper is potentially relevant based ONLY on its title and categories.
 This is a fast preliminary filter - be generous in passing papers that might be relevant.
-Respond with a boolean pass_filter and a score (0-1)."""
+Respond with a score (0-1) and a relevance statement."""
 
         user_message = f"""User's interests: {user_prompt}
 
@@ -200,7 +224,7 @@ Is this paper potentially relevant? Provide a quick assessment."""
         """
         system_message = """You are an expert at evaluating academic paper relevance.
 Your task is to determine if a paper is relevant based on its metadata and abstract.
-Provide a detailed assessment with a pass/fail decision, relevance score, and category."""
+Provide a detailed assessment with a relevance score and reasoning."""
 
         user_message = f"""User's interests: {user_prompt}
 
@@ -272,80 +296,6 @@ Provide a comprehensive analysis including:
             {"role": "system", "content": system_message},
             {"role": "user", "content": user_message},
         ]
-
-    async def filter_stage1(
-        self,
-        title: str,
-        categories: list[str],
-        user_prompt: str,
-    ) -> Stage1Result:
-        """
-        Execute Stage 1 filtering.
-
-        Args:
-            title: Paper title
-            categories: arXiv categories
-            user_prompt: User's filtering criteria
-
-        Returns:
-            Stage1Result with pass/fail and score
-        """
-        messages = self.build_stage1_messages(title, categories, user_prompt)
-        return await self.complete(messages, Stage1Result)
-
-    async def filter_stage2(
-        self,
-        title: str,
-        authors: list[str],
-        categories: list[str],
-        abstract: str,
-        user_prompt: str,
-    ) -> Stage2Result:
-        """
-        Execute Stage 2 filtering.
-
-        Args:
-            title: Paper title
-            authors: List of author names
-            categories: arXiv categories
-            abstract: Paper abstract
-            user_prompt: User's filtering criteria
-
-        Returns:
-            Stage2Result with detailed assessment
-        """
-        messages = self.build_stage2_messages(title, authors, categories, abstract, user_prompt)
-        return await self.complete(messages, Stage2Result)
-
-    async def filter_stage3(
-        self,
-        title: str,
-        authors: list[str],
-        categories: list[str],
-        abstract: str,
-        full_text: str,
-        user_prompt: str,
-        custom_fields: list[str] | None = None,
-    ) -> Stage3Result:
-        """
-        Execute Stage 3 filtering.
-
-        Args:
-            title: Paper title
-            authors: List of author names
-            categories: arXiv categories
-            abstract: Paper abstract
-            full_text: Full paper text
-            user_prompt: User's filtering criteria
-            custom_fields: List of custom field names
-
-        Returns:
-            Stage3Result with comprehensive analysis
-        """
-        messages = self.build_stage3_messages(
-            title, authors, categories, abstract, full_text, user_prompt, custom_fields
-        )
-        return await self.complete(messages, Stage3Result)
 
     async def close(self) -> None:
         """Close the client connection."""

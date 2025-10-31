@@ -1,5 +1,5 @@
-"""Parser module for extracting text from various formats."""
+"""HTML parser for arXiv papers."""
 
-from .html_cleaner import ArxivHtmlCleaner, clean_arxiv_html
+from .html_cleaner import ArxivHtmlCleaner
 
-__all__ = ["ArxivHtmlCleaner", "clean_arxiv_html"]
+__all__ = ["ArxivHtmlCleaner"]

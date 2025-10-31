@@ -1,9 +1,9 @@
-"""Stage 2 filter: Refined screening based on metadata and abstract."""
+"""Stage 2 filter: Refined screening with abstract."""
 
 from loguru import logger
 
 from src.cache import CacheManager
-from src.llm import AsyncLLMClient, Stage2Result
+from src.llm import AsyncLLMClient, Stage2Result, prepare_result_with_conversation
 
 
 class Stage2Filter:
@@ -37,54 +37,11 @@ class Stage2Filter:
 
         logger.info(f"Stage2Filter initialized: threshold={threshold}")
 
-    async def filter_paper(
-        self,
-        paper_id: str,
-        title: str,
-        authors: list[str],
-        categories: list[str],
-        abstract: str,
-        user_prompt: str,
-    ) -> Stage2Result:
-        """
-        Filter a single paper through Stage 2.
-
-        Args:
-            paper_id: arXiv paper ID
-            title: Paper title
-            authors: List of author names
-            categories: arXiv categories
-            abstract: Paper abstract
-            user_prompt: User's filtering criteria
-
-        Returns:
-            Stage2Result with detailed assessment
-        """
-        # Check cache first
-        cached_result = self.cache_manager.get(2, paper_id, self.config_hash)
-        if cached_result is not None:
-            logger.debug(f"Stage 2 cache hit: {paper_id}")
-            return Stage2Result(**cached_result)
-
-        # Call LLM for evaluation
-        logger.debug(f"Stage 2 evaluating: {paper_id}")
-        result = await self.llm_client.filter_stage2(
-            title, authors, categories, abstract, user_prompt
-        )
-
-        # Apply threshold
-        result.pass_filter = result.score >= self.threshold
-
-        # Cache the result
-        self.cache_manager.set(2, paper_id, result.model_dump(), self.config_hash)
-
-        return result
-
     async def filter_batch(
         self,
         papers: list[dict],
         user_prompt: str,
-    ) -> list[tuple[dict, Stage2Result]]:
+    ) -> list[tuple[dict, dict]]:
         """
         Filter multiple papers in parallel.
 
@@ -93,7 +50,7 @@ class Stage2Filter:
             user_prompt: User's filtering criteria
 
         Returns:
-            List of (paper, result) tuples
+            List of (paper, result_dict) tuples where result_dict contains score, reasoning, pass_filter
         """
         logger.info(f"Stage 2 filtering {len(papers)} papers...")
 
@@ -106,7 +63,7 @@ class Stage2Filter:
             cached = self.cache_manager.get(2, paper_id, self.config_hash)
 
             if cached is not None:
-                cached_results.append((paper, Stage2Result(**cached)))
+                cached_results.append((paper, cached))
             else:
                 uncached_papers.append(paper)
 
@@ -131,12 +88,12 @@ class Stage2Filter:
             # Call LLM in parallel
             results = await self.llm_client.complete_batch(batch_messages, Stage2Result)
 
-            # Apply threshold and cache results
+            # Convert to dicts with pass_filter, messages and cache results
             evaluated_results = []
-            for paper, result in zip(uncached_papers, results, strict=True):
-                result.pass_filter = result.score >= self.threshold
-                self.cache_manager.set(2, paper["id"], result.model_dump(), self.config_hash)
-                evaluated_results.append((paper, result))
+            for paper, messages, (result, usage, cost_info) in zip(uncached_papers, batch_messages, results, strict=True):
+                result_dict = prepare_result_with_conversation(result, self.threshold, messages, usage, cost_info)
+                self.cache_manager.set(2, paper["id"], result_dict, self.config_hash)
+                evaluated_results.append((paper, result_dict))
 
             # Combine cached and evaluated results
             all_results = cached_results + evaluated_results
@@ -144,7 +101,7 @@ class Stage2Filter:
             all_results = cached_results
 
         # Log statistics
-        passed = sum(1 for _, result in all_results if result.pass_filter)
+        passed = sum(1 for _, result in all_results if result["pass_filter"])
         logger.info(f"Stage 2 complete: {passed}/{len(papers)} papers passed ({passed/len(papers)*100:.1f}%)")
 
         return all_results

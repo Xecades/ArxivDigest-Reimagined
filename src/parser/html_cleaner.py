@@ -141,9 +141,7 @@ class ArxivHtmlCleaner:
 
             # Check if this section is in our priority list
             section_name_lower = section_name.lower()
-            is_priority = any(
-                priority in section_name_lower for priority in self.section_priority
-            )
+            is_priority = any(priority in section_name_lower for priority in self.section_priority)
 
             if is_priority or not sections:  # Always include first section
                 section_text = self._extract_text(section)
@@ -213,25 +211,3 @@ class ArxivHtmlCleaner:
         text = "\n".join(lines)
 
         return text.strip()
-
-
-def clean_arxiv_html(
-    html: str, max_chars: int | None = None, sections: list[str] | None = None
-) -> str:
-    """
-    Convenience function to clean arXiv HTML.
-
-    Args:
-        html: Raw HTML content
-        max_chars: Maximum characters to extract (None = no limit)
-        sections: Specific sections to extract (None = use defaults)
-
-    Returns:
-        Cleaned text
-    """
-    cleaner = ArxivHtmlCleaner(max_chars=max_chars)
-
-    if sections:
-        cleaner.section_priority = sections
-
-    return cleaner.clean(html)

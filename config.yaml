@@ -9,7 +9,7 @@ arxiv:
     - "Computer Vision and Pattern Recognition"
     - "Artificial Intelligence"
     - "Robotics"
-  max_results: 0
+  max_results: 10
 
 # ============================================
 # LLM Settings
@@ -25,11 +25,12 @@ llm:
 # ============================================
 # Three-Stage Filtering
 # ============================================
-user_prompt: |
-  和 VLN (Vision-Language Navigation) / VLA (Vision Language Action) 相关；
-  其中和"无图目标导航"任务相关的工作优先级更高；
-  重点关注室内场景下的导航任务；
-  用中文回答原因。
+# user_prompt: |
+#   和 VLN (Vision-Language Navigation) / VLA (Vision Language Action) 相关；
+#   其中和"无图目标导航"任务相关的工作优先级更高；
+#   重点关注室内场景下的导航任务；
+#   用中文回答原因。
+user_prompt: 和大语言模型相关的论文。用中文回答。
 
 stage1:
   enabled: true

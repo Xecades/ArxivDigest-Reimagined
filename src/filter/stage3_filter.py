@@ -4,7 +4,7 @@ from loguru import logger
 
 from src.cache import CacheManager
 from src.fetcher import ArxivHTMLCrawler
-from src.llm import AsyncLLMClient, Stage3Result
+from src.llm import AsyncLLMClient, Stage3Result, prepare_result_with_conversation
 from src.parser import ArxivHtmlCleaner
 
 
@@ -55,72 +55,11 @@ class Stage3Filter:
             f"max_chars={max_text_chars}, custom_fields={custom_fields}"
         )
 
-    async def filter_paper(
-        self,
-        paper_id: str,
-        title: str,
-        authors: list[str],
-        categories: list[str],
-        abstract: str,
-        user_prompt: str,
-    ) -> Stage3Result | None:
-        """
-        Filter a single paper through Stage 3.
-
-        Args:
-            paper_id: arXiv paper ID
-            title: Paper title
-            authors: List of author names
-            categories: arXiv categories
-            abstract: Paper abstract
-            user_prompt: User's filtering criteria
-
-        Returns:
-            Stage3Result with comprehensive analysis, or None if HTML fetch failed
-        """
-        # Check cache first
-        cached_result = self.cache_manager.get(3, paper_id, self.config_hash)
-        if cached_result is not None:
-            logger.debug(f"Stage 3 cache hit: {paper_id}")
-            return Stage3Result(**cached_result)
-
-        # Fetch HTML
-        logger.debug(f"Stage 3 fetching HTML: {paper_id}")
-        html = await self.html_crawler.fetch_html(paper_id)
-
-        if html is None:
-            logger.warning(f"Stage 3 failed to fetch HTML: {paper_id}")
-            return None
-
-        # Extract text from HTML
-        logger.debug(f"Stage 3 extracting text: {paper_id}")
-        full_text = self.html_cleaner.clean(html)
-
-        # Call LLM for evaluation
-        logger.debug(f"Stage 3 evaluating: {paper_id}")
-        result = await self.llm_client.filter_stage3(
-            title=title,
-            authors=authors,
-            categories=categories,
-            abstract=abstract,
-            full_text=full_text,
-            user_prompt=user_prompt,
-            custom_fields=self.custom_fields,
-        )
-
-        # Apply threshold
-        result.pass_filter = result.score >= self.threshold
-
-        # Cache the result
-        self.cache_manager.set(3, paper_id, result.model_dump(), self.config_hash)
-
-        return result
-
     async def filter_batch(
         self,
         papers: list[dict],
         user_prompt: str,
-    ) -> list[tuple[dict, Stage3Result | None]]:
+    ) -> list[tuple[dict, dict | None]]:
         """
         Filter multiple papers in parallel.
 
@@ -129,12 +68,12 @@ class Stage3Filter:
             user_prompt: User's filtering criteria
 
         Returns:
-            List of (paper, result) tuples (result can be None if HTML fetch failed)
+            List of (paper, result_dict) tuples (result_dict can be None if HTML fetch failed)
         """
         logger.info(f"Stage 3 filtering {len(papers)} papers...")
 
         # Separate cached and uncached papers
-        cached_results: list[tuple[dict, Stage3Result | None]] = []
+        cached_results: list[tuple[dict, dict | None]] = []
         uncached_papers = []
 
         for paper in papers:
@@ -142,7 +81,7 @@ class Stage3Filter:
             cached = self.cache_manager.get(3, paper_id, self.config_hash)
 
             if cached is not None:
-                cached_results.append((paper, Stage3Result(**cached)))
+                cached_results.append((paper, cached))
             else:
                 uncached_papers.append(paper)
 
@@ -190,12 +129,12 @@ class Stage3Filter:
                 # Call LLM in parallel
                 results = await self.llm_client.complete_batch(batch_messages, Stage3Result)
 
-                # Apply threshold and cache results
+                # Convert to dicts with pass_filter, messages and cache results
                 evaluated_results = []
-                for (paper, _), result in zip(papers_with_text, results, strict=True):
-                    result.pass_filter = result.score >= self.threshold
-                    self.cache_manager.set(3, paper["id"], result.model_dump(), self.config_hash)
-                    evaluated_results.append((paper, result))
+                for (paper, _), messages, (result, usage, cost_info) in zip(papers_with_text, batch_messages, results, strict=True):
+                    result_dict = prepare_result_with_conversation(result, self.threshold, messages, usage, cost_info)
+                    self.cache_manager.set(3, paper["id"], result_dict, self.config_hash)
+                    evaluated_results.append((paper, result_dict))
 
                 # Combine all results
                 all_results = cached_results + evaluated_results
@@ -205,7 +144,7 @@ class Stage3Filter:
             all_results = cached_results
 
         # Log statistics
-        passed = sum(1 for _, result in all_results if result and result.pass_filter)
+        passed = sum(1 for _, result in all_results if result and result["pass_filter"])
         total = sum(1 for _, r in all_results if r is not None)
         if total > 0:
             logger.info(f"Stage 3 complete: {passed}/{total} papers passed ({passed/total*100:.1f}%)")

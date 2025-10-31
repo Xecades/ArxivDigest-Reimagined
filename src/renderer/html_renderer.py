@@ -39,9 +39,9 @@ class HTMLRenderer:
 
         # Count papers at each stage
         stage1_total = len(stage1_results)
-        stage1_passed = len([r for _, r in stage1_results if r.pass_filter])
-        stage2_passed = len([r for _, r in stage2_results if r.pass_filter])
-        stage3_passed = len([r for _, r in stage3_results if r and r.pass_filter])
+        stage1_passed = len([r for _, r in stage1_results if r["pass_filter"]])
+        stage2_passed = len([r for _, r in stage2_results if r["pass_filter"]])
+        stage3_passed = len([r for _, r in stage3_results if r and r["pass_filter"]])
 
         logger.info(
             f"Rendering HTML: {stage1_total} total, "
@@ -91,13 +91,17 @@ class HTMLRenderer:
                 "abs_url": paper.get("abs_url", ""),
                 "published": paper.get("published", ""),
                 "stage1": {
-                    "pass": result.pass_filter,
-                    "score": result.score,
-                    "reasoning": getattr(result, "reasoning", ""),
+                    "pass": result["pass_filter"],
+                    "score": result["score"],
+                    "reasoning": result.get("reasoning", ""),
+                    "messages": result.get("messages", []),
+                    "usage": result.get("usage"),
+                    "estimated_cost": result.get("estimated_cost"),
+                    "estimated_cost_currency": result.get("estimated_cost_currency"),
                 },
                 "stage2": None,
                 "stage3": None,
-                "max_stage": 1 if result.pass_filter else 0,
+                "max_stage": 1 if result["pass_filter"] else 0,
             }
 
         # Stage 2 results
@@ -105,12 +109,15 @@ class HTMLRenderer:
             paper_id = paper["id"]
             if paper_id in papers_map:
                 papers_map[paper_id]["stage2"] = {
-                    "pass": result.pass_filter,
-                    "score": result.score,
-                    "reasoning": getattr(result, "reasoning", ""),
-                    "category": getattr(result, "category", ""),
+                    "pass": result["pass_filter"],
+                    "score": result["score"],
+                    "reasoning": result.get("reasoning", ""),
+                    "messages": result.get("messages", []),
+                    "usage": result.get("usage"),
+                    "estimated_cost": result.get("estimated_cost"),
+                    "estimated_cost_currency": result.get("estimated_cost_currency"),
                 }
-                if result.pass_filter:
+                if result["pass_filter"]:
                     papers_map[paper_id]["max_stage"] = 2
 
         # Stage 3 results
@@ -120,19 +127,23 @@ class HTMLRenderer:
             paper_id = paper["id"]
             if paper_id in papers_map:
                 stage3_data = {
-                    "pass": result.pass_filter,
-                    "score": result.score,
-                    "novelty_score": result.novelty_score,
-                    "impact_score": result.impact_score,
-                    "quality_score": result.quality_score,
-                    "reasoning": result.reasoning,
+                    "pass": result["pass_filter"],
+                    "score": result["score"],
+                    "novelty_score": result["novelty_score"],
+                    "impact_score": result["impact_score"],
+                    "quality_score": result["quality_score"],
+                    "reasoning": result["reasoning"],
+                    "messages": result.get("messages", []),
+                    "usage": result.get("usage"),
+                    "estimated_cost": result.get("estimated_cost"),
+                    "estimated_cost_currency": result.get("estimated_cost_currency"),
                 }
                 # Add custom fields
-                if hasattr(result, "custom_fields") and result.custom_fields:
-                    stage3_data["custom_fields"] = result.custom_fields
+                if "custom_fields" in result and result["custom_fields"]:
+                    stage3_data["custom_fields"] = result["custom_fields"]
 
                 papers_map[paper_id]["stage3"] = stage3_data
-                if result.pass_filter:
+                if result["pass_filter"]:
                     papers_map[paper_id]["max_stage"] = 3
 
         # Convert to list and sort by max_stage (descending) and score
@@ -509,6 +520,219 @@ class HTMLRenderer:
             line-height: 1.7;
         }}
         
+        .conversation-btn {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }}
+        
+        .conversation-btn:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }}
+        
+        .conversation-btn:active {{
+            transform: translateY(0);
+        }}
+        
+        .modal {{
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s ease;
+        }}
+        
+        .modal.show {{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }}
+        
+        @keyframes fadeIn {{
+            from {{ opacity: 0; }}
+            to {{ opacity: 1; }}
+        }}
+        
+        .modal-content {{
+            background: white;
+            border-radius: 12px;
+            max-width: 900px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s ease;
+        }}
+        
+        @keyframes slideUp {{
+            from {{
+                transform: translateY(50px);
+                opacity: 0;
+            }}
+            to {{
+                transform: translateY(0);
+                opacity: 1;
+            }}
+        }}
+        
+        .modal-header {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 12px 12px 0 0;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }}
+        
+        .modal-title {{
+            font-size: 1.3em;
+            font-weight: 600;
+        }}
+        
+        .modal-close {{
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 1.5em;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }}
+        
+        .modal-close:hover {{
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(90deg);
+        }}
+        
+        .modal-body {{
+            padding: 25px;
+        }}
+        
+        .conversation-section {{
+            margin-bottom: 25px;
+        }}
+        
+        .conversation-section:last-child {{
+            margin-bottom: 0;
+        }}
+        
+        .stage-header {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }}
+        
+        .stage-score {{
+            font-size: 1.1em;
+        }}
+        
+        .message {{
+            margin-bottom: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            line-height: 1.7;
+        }}
+        
+        .message-user {{
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+        }}
+        
+        .message-assistant {{
+            background: #f8f9fa;
+            border-left: 4px solid #764ba2;
+        }}
+        
+        .message-system {{
+            background: #fff9e6;
+            border-left: 4px solid #ffc107;
+        }}
+        
+        .message-role {{
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }}
+        
+        .message-toggle {{
+            cursor: pointer;
+            font-size: 1.2em;
+            user-select: none;
+            padding: 0 5px;
+            transition: transform 0.2s ease;
+        }}
+        
+        .message-toggle:hover {{
+            opacity: 0.7;
+        }}
+        
+        .message-toggle.collapsed {{
+            transform: rotate(-90deg);
+        }}
+        
+        .message-content-wrapper {{
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+        }}
+        
+        .message-content-wrapper.collapsed {{
+            max-height: 0 !important;
+            opacity: 0;
+        }}
+        
+        .message-user .message-role {{
+            color: #667eea;
+        }}
+        
+        .message-assistant .message-role {{
+            color: #764ba2;
+        }}
+        
+        .message-system .message-role {{
+            color: #f59e0b;
+        }}
+        
+        .message-content {{
+            color: #333;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }}
+        
         .custom-fields {{
             margin-top: 15px;
         }}
@@ -532,6 +756,16 @@ class HTMLRenderer:
             text-align: center;
             padding: 60px 20px;
             color: #999;
+        }}
+        
+        .usage-info {{
+            font-size: 0.9em;
+            color: #666;
+            margin: 10px 0;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 3px solid #667eea;
         }}
         
         .no-papers-icon {{
@@ -639,6 +873,28 @@ class HTMLRenderer:
             .score-bar {{
                 flex: 1;
                 min-width: 100px;
+            }}
+            
+            .modal-content {{
+                width: 95%;
+                max-height: 90vh;
+            }}
+            
+            .modal-header {{
+                padding: 15px;
+            }}
+            
+            .modal-title {{
+                font-size: 1.1em;
+            }}
+            
+            .modal-body {{
+                padding: 15px;
+            }}
+            
+            .message {{
+                padding: 12px;
+                font-size: 0.9em;
             }}
             
             .reasoning {{
@@ -769,6 +1025,19 @@ class HTMLRenderer:
             <p>{title} | Three-Stage Progressive Filtering System</p>
             <p>Stage 1: Title + Categories | Stage 2: + Authors + Abstract | Stage 3: + Full Paper Analysis</p>
         </footer>
+    </div>
+    
+    <!-- Conversation Modal -->
+    <div id="conversationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">LLM Conversations</div>
+                <button class="modal-close" onclick="closeConversationModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Conversation content will be inserted here -->
+            </div>
+        </div>
     </div>
     
     <script>
@@ -971,6 +1240,14 @@ class HTMLRenderer:
                 html += '</div>';
             }}
             
+            // Add conversation button
+            html += `
+                <button class="conversation-btn" onclick="showConversation('${{paper.arxiv_id}}')">
+                    <span>💬</span>
+                    <span>View LLM Conversations</span>
+                </button>
+            `;
+            
             html += '</div>';
             return html;
         }}
@@ -1000,6 +1277,159 @@ class HTMLRenderer:
             return name.split('_').map(word => 
                 word.charAt(0).toUpperCase() + word.slice(1)
             ).join(' ');
+        }}
+        
+        // Format cost number to 3 decimal places and include currency if present
+        function formatCost(cost) {{
+            if (cost === null || cost === undefined) return 'N/A';
+            try {{
+                return cost.toFixed(6);
+            }} catch (e) {{
+                return String(cost);
+            }}
+        }}
+
+        // Render usage and estimated cost HTML for a stage
+        function renderUsage(usage, estimated_cost, currency) {{
+            if (!usage) return '';
+            
+            const p = usage.prompt_tokens != null ? usage.prompt_tokens.toLocaleString() : 'N/A';
+            const c = usage.completion_tokens != null ? usage.completion_tokens.toLocaleString() : 'N/A';
+            const t = usage.total_tokens != null ? usage.total_tokens.toLocaleString() : 'N/A';
+            const costText = estimated_cost != null ? (estimated_cost === 0 ? '0.000000' : formatCost(estimated_cost)) : 'N/A';
+            const costWithCurrency = (costText === 'N/A') ? 'N/A' : (currency ? `${{currency}} ${{costText}}` : costText);
+            
+            return `<div class="usage-info">Tokens: ${{p}} + ${{c}} = ${{t}} · Cost: ${{costWithCurrency}}</div>`;
+        }}
+        
+        // Show conversation modal
+        function showConversation(paperId) {{
+            const paper = papersData.find(p => p.arxiv_id === paperId);
+            if (!paper) return;
+            
+            const modal = document.getElementById('conversationModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            
+            // Set title
+            modalTitle.textContent = `LLM Conversations - ${{paper.title.substring(0, 60)}}...`;
+            
+            // Build conversation HTML
+            let conversationHtml = '';
+            
+            // Stage 1
+            if (paper.stage1 && paper.stage1.messages && paper.stage1.messages.length > 0) {{
+                conversationHtml += `
+                    <div class="conversation-section">
+                        <div class="stage-header">
+                            <span>Stage 1: Quick Screening</span>
+                            <span class="stage-score">Score: ${{paper.stage1.score.toFixed(2)}} ${{paper.stage1.pass ? '✅' : '❌'}}</span>
+                        </div>
+                        ${{renderUsage(paper.stage1.usage, paper.stage1.estimated_cost, paper.stage1.estimated_cost_currency)}}
+                        ${{renderMessages(paper.stage1.messages, 'stage1')}}
+                    </div>
+                `;
+            }}
+            
+            // Stage 2
+            if (paper.stage2 && paper.stage2.messages && paper.stage2.messages.length > 0) {{
+                conversationHtml += `
+                    <div class="conversation-section">
+                        <div class="stage-header">
+                            <span>Stage 2: Refined Screening</span>
+                            <span class="stage-score">Score: ${{paper.stage2.score.toFixed(2)}} ${{paper.stage2.pass ? '✅' : '❌'}}</span>
+                        </div>
+                        ${{renderUsage(paper.stage2.usage, paper.stage2.estimated_cost, paper.stage2.estimated_cost_currency)}}
+                        ${{renderMessages(paper.stage2.messages, 'stage2')}}
+                    </div>
+                `;
+            }}
+            
+            // Stage 3
+            if (paper.stage3 && paper.stage3.messages && paper.stage3.messages.length > 0) {{
+                conversationHtml += `
+                    <div class="conversation-section">
+                        <div class="stage-header">
+                            <span>Stage 3: Deep Analysis</span>
+                            <span class="stage-score">Score: ${{paper.stage3.score.toFixed(2)}} ${{paper.stage3.pass ? '✅' : '❌'}}</span>
+                        </div>
+                        ${{renderUsage(paper.stage3.usage, paper.stage3.estimated_cost, paper.stage3.estimated_cost_currency)}}
+                        ${{renderMessages(paper.stage3.messages, 'stage3')}}
+                    </div>
+                `;
+            }}
+            
+            if (!conversationHtml) {{
+                conversationHtml = '<p style="text-align: center; color: #999; padding: 40px;">No conversation data available (all results from cache)</p>';
+            }}
+            
+            modalBody.innerHTML = conversationHtml;
+            modal.classList.add('show');
+            
+            // Prevent body scroll
+            document.body.style.overflow = 'hidden';
+        }}
+        
+        // Close conversation modal
+        function closeConversationModal() {{
+            const modal = document.getElementById('conversationModal');
+            modal.classList.remove('show');
+            document.body.style.overflow = '';
+        }}
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', (e) => {{
+            const modal = document.getElementById('conversationModal');
+            if (e.target === modal) {{
+                closeConversationModal();
+            }}
+        }});
+        
+        // Render messages
+        function renderMessages(messages, stageId) {{
+            if (!messages || messages.length === 0) return '';
+            
+            return messages.map((msg, index) => {{
+                const roleClass = `message-${{msg.role}}`;
+                const roleLabel = msg.role.charAt(0).toUpperCase() + msg.role.slice(1);
+                const msgId = `msg-${{stageId}}-${{index}}`;
+                
+                // For assistant messages, preserve JSON formatting
+                let content;
+                if (msg.role === 'assistant') {{
+                    content = `<pre style="margin: 0; white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 0.9em;">${{escapeHtml(msg.content)}}</pre>`;
+                }} else {{
+                    content = `<div class="message-content">${{escapeHtml(msg.content)}}</div>`;
+                }}
+                
+                return `
+                    <div class="message ${{roleClass}}">
+                        <div class="message-role">
+                            <span>${{roleLabel}}</span>
+                            <span class="message-toggle" onclick="toggleMessage('${{msgId}}')">▼</span>
+                        </div>
+                        <div id="${{msgId}}" class="message-content-wrapper">
+                            ${{content}}
+                        </div>
+                    </div>
+                `;
+            }}).join('');
+        }}
+        
+        // Toggle message content visibility
+        function toggleMessage(msgId) {{
+            const contentWrapper = document.getElementById(msgId);
+            const toggle = event.currentTarget;
+            
+            if (contentWrapper.classList.contains('collapsed')) {{
+                contentWrapper.classList.remove('collapsed');
+                toggle.classList.remove('collapsed');
+                toggle.textContent = '▼';
+            }} else {{
+                contentWrapper.classList.add('collapsed');
+                toggle.classList.add('collapsed');
+                toggle.textContent = '▼';
+            }}
         }}
     </script>
 </body>
