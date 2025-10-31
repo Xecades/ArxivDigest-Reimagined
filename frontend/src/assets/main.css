@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    html {
+        @apply min-h-screen;
+    }
+
+    body {
+        @apply min-h-screen bg-gradient-to-br from-primary to-primary-dark;
+    }
+}
+
+@layer utilities {
+    .animate-fade-in {
+        animation: fade-in 0.3s ease;
+    }
+
+    .animate-slide-up {
+        animation: slide-up 0.3s ease;
+    }
+}
+
+@keyframes fade-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slide-up {
+    from {
+        transform: translateY(50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}

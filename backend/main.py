@@ -36,8 +36,6 @@ def load_config(config_path: str = "config.yaml") -> dict[str, Any]:
     return config
 
 
-
-
 async def async_main(config: dict) -> None:
     """Async main function."""
     # Extract configuration
@@ -129,19 +127,15 @@ async def async_main(config: dict) -> None:
     # Run filtering pipeline
     results = await pipeline.run(papers, user_prompt)
 
-    # Store stats for HTML generation
-    config["stage1_passed"] = len(results["stage1_passed"])
-    config["stage2_passed"] = len(results["stage2_passed"])
-    config["stage3_passed"] = len(results["stage3_passed"])
+    # Generate JSON output
+    logger.info("Generating JSON output...")
+    from src.exporter import JSONExporter
 
-    # Generate interactive HTML output
-    logger.info("Generating HTML output...")
-    from src.renderer import HTMLRenderer
-
-    renderer = HTMLRenderer()
-    output_path = Path(config["output"].get("file", "digest.html"))
-    renderer.render(
+    exporter = JSONExporter()
+    output_path = Path("../frontend/public/digest.json")
+    exporter.export(
         pipeline_results=results,
+        config=config,
         output_path=str(output_path),
         title="ArXiv Digest - Reimagined",
     )

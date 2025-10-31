@@ -66,10 +66,3 @@ crawler:
   timeout: 30
   max_retries: 3
   retry_delay: 1.0
-
-# ============================================
-# Output Settings
-# ============================================
-output:
-  format: "html"
-  file: "digest.html"

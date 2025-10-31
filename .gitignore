@@ -162,5 +162,5 @@ cython_debug/
 # vim
 *.sw*
 
-digest.html
+digest.json
 data
