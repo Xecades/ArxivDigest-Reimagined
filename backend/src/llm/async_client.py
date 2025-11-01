@@ -249,7 +249,7 @@ Evaluate this paper's relevance to the user's interests."""
         abstract: str,
         full_text: str,
         user_prompt: str,
-        custom_fields: list[str] | None = None,
+        custom_fields: list[dict[str, str]] | None = None,
     ) -> list[dict[str, str]]:
         """
         Build messages for Stage 3 filtering (Full paper analysis).
@@ -261,7 +261,7 @@ Evaluate this paper's relevance to the user's interests."""
             abstract: Paper abstract
             full_text: Full paper text (cleaned from HTML)
             user_prompt: User's filtering criteria
-            custom_fields: List of custom field names to extract
+            custom_fields: List of custom field dicts with 'name' and 'description'
 
         Returns:
             List of message dicts
@@ -272,9 +272,17 @@ Provide multi-dimensional scores and extract specific information as requested."
 
         custom_fields_prompt = ""
         if custom_fields:
-            custom_fields_prompt = (
-                f"\n\nExtract the following custom fields: {', '.join(custom_fields)}"
-            )
+            fields_list = []
+            for field in custom_fields:
+                field_name = field.get("name", "")
+                field_desc = field.get("description", "")
+                if field_name:
+                    fields_list.append(f"  - {field_name}: {field_desc}")
+
+            if fields_list:
+                custom_fields_prompt = "\n\nExtract the following custom fields:\n" + "\n".join(
+                    fields_list
+                )
 
         user_message = f"""User's interests: {user_prompt}
 

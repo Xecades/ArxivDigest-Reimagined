@@ -24,7 +24,7 @@ class Stage3Filter:
         html_crawler: ArxivHTMLCrawler,
         threshold: float = 0.8,
         max_text_chars: int = 8000,
-        custom_fields: list[str] | None = None,
+        custom_fields: list[dict[str, str]] | None = None,
         config_hash: str | None = None,
     ):
         """
@@ -36,7 +36,7 @@ class Stage3Filter:
             html_crawler: HTML crawler for fetching papers
             threshold: Score threshold for passing (0-1)
             max_text_chars: Maximum characters to extract from paper
-            custom_fields: List of custom field names to extract
+            custom_fields: List of custom field dicts with 'name' and 'description'
             config_hash: Configuration hash for cache invalidation
         """
         self.llm_client = llm_client
@@ -50,9 +50,12 @@ class Stage3Filter:
         # HTML cleaner for text extraction
         self.html_cleaner = ArxivHtmlCleaner(max_chars=max_text_chars)
 
+        # Extract field names for logging
+        field_names = [f.get("name", "") for f in self.custom_fields if f.get("name")]
+
         logger.info(
             f"Stage3Filter initialized: threshold={threshold}, "
-            f"max_chars={max_text_chars}, custom_fields={custom_fields}"
+            f"max_chars={max_text_chars}, custom_fields={field_names}"
         )
 
     async def filter_batch(

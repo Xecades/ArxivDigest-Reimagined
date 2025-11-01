@@ -68,7 +68,12 @@ const MetadataSchema = z.object({
         stage2: z.number(),
         stage3: z.number(),
     }),
-    custom_fields: z.array(z.string()),
+    custom_fields: z.array(
+        z.object({
+            name: z.string(),
+            description: z.string(),
+        }),
+    ),
     stats: z.object({
         total_papers: z.number(),
         stage1_passed: z.number(),

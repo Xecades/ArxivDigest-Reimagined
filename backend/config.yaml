@@ -45,10 +45,14 @@ stage3:
   threshold: 0.8
   max_text_chars: 8000
   custom_fields:
-    - "key_innovations"
-    - "technical_approach"
-    - "limitations"
-    - "potential_impact"
+    - name: "key_innovations"
+      description: "列出论文的核心创新点和主要贡献，包括新方法、新技术或新发现"
+    - name: "technical_approach"
+      description: "概述论文使用的技术方法和实现细节，包括模型架构、算法或实验设计"
+    - name: "limitations"
+      description: "指出论文的局限性、潜在问题或未来需要改进的地方"
+    - name: "potential_impact"
+      description: "评估论文对该领域的潜在影响，包括应用价值和研究意义"
 
 # ============================================
 # Cache Settings

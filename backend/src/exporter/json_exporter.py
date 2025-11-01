@@ -114,7 +114,7 @@ class JSONExporter:
                 "stage2": stage2_config.get("threshold", 0.7),
                 "stage3": stage3_config.get("threshold", 0.8),
             },
-            "custom_fields": stage3_config.get("custom_fields", []),
+            "custom_fields": stage3_config.get("custom_fields", {}),
             "stats": {
                 "total_papers": stage1_total,
                 "stage1_passed": stage1_passed,

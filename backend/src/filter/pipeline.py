@@ -29,7 +29,7 @@ class FilterPipeline:
         stage2_threshold: float = 0.7,
         stage3_threshold: float = 0.8,
         stage3_max_chars: int = 8000,
-        custom_fields: list[str] | None = None,
+        custom_fields: list[dict[str, str]] | None = None,
         config_hash: str | None = None,
     ):
         """
@@ -43,7 +43,7 @@ class FilterPipeline:
             stage2_threshold: Threshold for Stage 2 (0-1)
             stage3_threshold: Threshold for Stage 3 (0-1)
             stage3_max_chars: Max characters for Stage 3 text extraction
-            custom_fields: Custom field names for Stage 3
+            custom_fields: List of custom field dicts with 'name' and 'description'
             config_hash: Configuration hash for cache invalidation
         """
         self.llm_client = llm_client
