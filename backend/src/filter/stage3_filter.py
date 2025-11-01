@@ -121,7 +121,6 @@ class Stage3Filter:
                         title=paper["title"],
                         authors=paper["authors"],
                         categories=paper["categories"],
-                        abstract=paper["abstract"],
                         full_text=full_text,
                         user_prompt=user_prompt,
                         custom_fields=self.custom_fields,

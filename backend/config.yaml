@@ -43,7 +43,7 @@ stage2:
 stage3:
   enabled: true
   threshold: 0.8
-  max_text_chars: 8000
+  max_text_chars: 40000
   custom_fields:
     - name: "key_innovations"
       description: "列出论文的核心创新点和主要贡献，包括新方法、新技术或新发现"

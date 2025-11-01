@@ -246,7 +246,6 @@ Evaluate this paper's relevance to the user's interests."""
         title: str,
         authors: list[str],
         categories: list[str],
-        abstract: str,
         full_text: str,
         user_prompt: str,
         custom_fields: list[dict[str, str]] | None = None,
@@ -258,7 +257,6 @@ Evaluate this paper's relevance to the user's interests."""
             title: Paper title
             authors: List of author names
             categories: arXiv categories
-            abstract: Paper abstract
             full_text: Full paper text (cleaned from HTML)
             user_prompt: User's filtering criteria
             custom_fields: List of custom field dicts with 'name' and 'description'
@@ -290,10 +288,9 @@ Paper Information:
 - Title: {title}
 - Authors: {", ".join(authors)}
 - Categories: {", ".join(categories)}
-- Abstract: {abstract}
 
-Full Paper Content (first 8000 chars):
-{full_text[:8000]}
+Full Paper Content (partially truncated):
+{full_text}
 
 Provide a comprehensive analysis including:
 1. Overall relevance score
