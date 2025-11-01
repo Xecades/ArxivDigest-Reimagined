@@ -31,7 +31,7 @@ const Stage3ResultSchema = BaseStageResultSchema.extend({
     novelty_score: z.number(),
     impact_score: z.number(),
     quality_score: z.number(),
-    custom_fields: z.record(z.any()).optional(),
+    custom_fields: z.record(z.string()).optional(),
 });
 
 // Paper schema

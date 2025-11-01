@@ -1,7 +1,5 @@
 """Pydantic schemas for LLM responses."""
 
-from typing import Any
-
 from pydantic import BaseModel, Field
 
 from .cost_calculator import CostInfo, UsageInfo
@@ -32,7 +30,7 @@ class Stage3Result(FilterResult):
     """Result from Stage 3 filtering (Full paper content with custom fields)."""
 
     # Stage 3 has flexible custom fields defined by user
-    custom_fields: dict[str, Any] = Field(
+    custom_fields: dict[str, str] = Field(
         default_factory=dict,
         description="User-defined custom output fields",
     )
