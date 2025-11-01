@@ -106,9 +106,9 @@ class FilterPipeline:
                 "stage3_passed": [paper, ...],
             }
         """
-        logger.info(f"\n{'='*60}")
+        logger.info(f"\n{'=' * 60}")
         logger.info(f"Starting 3-stage filtering pipeline for {len(papers)} papers")
-        logger.info(f"{'='*60}\n")
+        logger.info(f"{'=' * 60}\n")
 
         # Stage 1: Quick screening
         logger.info("🔍 STAGE 1: Quick Screening (Title + Categories)")
@@ -149,17 +149,25 @@ class FilterPipeline:
             logger.warning("⚠️  No papers passed Stage 2, skipping Stage 3\n")
 
         # Summary
-        logger.info(f"{'='*60}")
+        logger.info(f"{'=' * 60}")
         logger.info("📊 PIPELINE SUMMARY")
-        logger.info(f"{'='*60}")
+        logger.info(f"{'=' * 60}")
         logger.info(f"Total input papers:     {len(papers)}")
-        logger.info(f"Stage 1 passed:         {len(stage1_passed)} ({len(stage1_passed)/len(papers)*100:.1f}%)")
+        logger.info(
+            f"Stage 1 passed:         {len(stage1_passed)} ({len(stage1_passed) / len(papers) * 100:.1f}%)"
+        )
         if stage1_passed:
-            logger.info(f"Stage 2 passed:         {len(stage2_passed)} ({len(stage2_passed)/len(stage1_passed)*100:.1f}%)")
+            logger.info(
+                f"Stage 2 passed:         {len(stage2_passed)} ({len(stage2_passed) / len(stage1_passed) * 100:.1f}%)"
+            )
         if stage2_passed:
-            logger.info(f"Stage 3 passed:         {len(stage3_passed)} ({len(stage3_passed)/len(stage2_passed)*100:.1f}%)")
-        logger.info(f"Final papers selected:  {len(stage3_passed)} ({len(stage3_passed)/len(papers)*100:.1f}%)")
-        logger.info(f"{'='*60}\n")
+            logger.info(
+                f"Stage 3 passed:         {len(stage3_passed)} ({len(stage3_passed) / len(stage2_passed) * 100:.1f}%)"
+            )
+        logger.info(
+            f"Final papers selected:  {len(stage3_passed)} ({len(stage3_passed) / len(papers) * 100:.1f}%)"
+        )
+        logger.info(f"{'=' * 60}\n")
 
         return {
             "stage1_results": stage1_results,

@@ -192,7 +192,7 @@ Respond with a score (0-1) and a relevance statement."""
 
 Paper Information:
 - Title: {title}
-- Categories: {', '.join(categories)}
+- Categories: {", ".join(categories)}
 
 Is this paper potentially relevant? Provide a quick assessment."""
 
@@ -230,8 +230,8 @@ Provide a detailed assessment with a relevance score and reasoning."""
 
 Paper Information:
 - Title: {title}
-- Authors: {', '.join(authors)}
-- Categories: {', '.join(categories)}
+- Authors: {", ".join(authors)}
+- Categories: {", ".join(categories)}
 - Abstract: {abstract}
 
 Evaluate this paper's relevance to the user's interests."""
@@ -272,14 +272,16 @@ Provide multi-dimensional scores and extract specific information as requested."
 
         custom_fields_prompt = ""
         if custom_fields:
-            custom_fields_prompt = f"\n\nExtract the following custom fields: {', '.join(custom_fields)}"
+            custom_fields_prompt = (
+                f"\n\nExtract the following custom fields: {', '.join(custom_fields)}"
+            )
 
         user_message = f"""User's interests: {user_prompt}
 
 Paper Information:
 - Title: {title}
-- Authors: {', '.join(authors)}
-- Categories: {', '.join(categories)}
+- Authors: {", ".join(authors)}
+- Categories: {", ".join(categories)}
 - Abstract: {abstract}
 
 Full Paper Content (first 8000 chars):

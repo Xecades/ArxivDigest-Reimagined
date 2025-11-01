@@ -47,11 +47,11 @@ class Stage3Result(FilterResult):
 def add_pass_filter(result: FilterResult, threshold: float) -> dict:
     """
     Add pass_filter to result based on score and threshold.
-    
+
     Args:
         result: FilterResult from LLM
         threshold: Score threshold
-    
+
     Returns:
         Dict with pass_filter added
     """
@@ -69,14 +69,14 @@ def prepare_result_with_conversation(
 ) -> dict:
     """
     Prepare result dict with pass_filter and conversation history.
-    
+
     Args:
         result: FilterResult from LLM
         threshold: Score threshold
         messages: Original request messages (system + user)
         usage: Token usage information
         cost_info: Cost information with estimated cost and currency
-    
+
     Returns:
         Dict with pass_filter and full conversation (including assistant response)
     """

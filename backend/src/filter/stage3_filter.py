@@ -131,8 +131,12 @@ class Stage3Filter:
 
                 # Convert to dicts with pass_filter, messages and cache results
                 evaluated_results = []
-                for (paper, _), messages, (result, usage, cost_info) in zip(papers_with_text, batch_messages, results, strict=True):
-                    result_dict = prepare_result_with_conversation(result, self.threshold, messages, usage, cost_info)
+                for (paper, _), messages, (result, usage, cost_info) in zip(
+                    papers_with_text, batch_messages, results, strict=True
+                ):
+                    result_dict = prepare_result_with_conversation(
+                        result, self.threshold, messages, usage, cost_info
+                    )
                     self.cache_manager.set(3, paper["id"], result_dict, self.config_hash)
                     evaluated_results.append((paper, result_dict))
 
@@ -147,7 +151,9 @@ class Stage3Filter:
         passed = sum(1 for _, result in all_results if result and result["pass_filter"])
         total = sum(1 for _, r in all_results if r is not None)
         if total > 0:
-            logger.info(f"Stage 3 complete: {passed}/{total} papers passed ({passed/total*100:.1f}%)")
+            logger.info(
+                f"Stage 3 complete: {passed}/{total} papers passed ({passed / total * 100:.1f}%)"
+            )
         else:
             logger.warning("Stage 3 complete: No papers could be evaluated")
 

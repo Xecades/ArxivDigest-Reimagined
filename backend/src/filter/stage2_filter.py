@@ -90,8 +90,12 @@ class Stage2Filter:
 
             # Convert to dicts with pass_filter, messages and cache results
             evaluated_results = []
-            for paper, messages, (result, usage, cost_info) in zip(uncached_papers, batch_messages, results, strict=True):
-                result_dict = prepare_result_with_conversation(result, self.threshold, messages, usage, cost_info)
+            for paper, messages, (result, usage, cost_info) in zip(
+                uncached_papers, batch_messages, results, strict=True
+            ):
+                result_dict = prepare_result_with_conversation(
+                    result, self.threshold, messages, usage, cost_info
+                )
                 self.cache_manager.set(2, paper["id"], result_dict, self.config_hash)
                 evaluated_results.append((paper, result_dict))
 
@@ -102,6 +106,8 @@ class Stage2Filter:
 
         # Log statistics
         passed = sum(1 for _, result in all_results if result["pass_filter"])
-        logger.info(f"Stage 2 complete: {passed}/{len(papers)} papers passed ({passed/len(papers)*100:.1f}%)")
+        logger.info(
+            f"Stage 2 complete: {passed}/{len(papers)} papers passed ({passed / len(papers) * 100:.1f}%)"
+        )
 
         return all_results
