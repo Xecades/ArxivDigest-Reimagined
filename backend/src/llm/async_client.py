@@ -31,7 +31,6 @@ class AsyncLLMClient:
         api_key: str,
         base_url: str | None = None,
         model: str = "gpt-4o-mini",
-        temperature: float = 0.0,
         max_retries: int = 3,
         timeout: float = 60.0,
         max_concurrent: int = 10,
@@ -43,13 +42,11 @@ class AsyncLLMClient:
             api_key: OpenAI API key
             base_url: Optional base URL for API (for custom endpoints)
             model: Model name to use
-            temperature: Sampling temperature (0.0 for deterministic)
             max_retries: Maximum number of retries for failed requests
             timeout: Request timeout in seconds
             max_concurrent: Maximum number of concurrent requests
         """
         self.model = model
-        self.temperature = temperature
         self.max_retries = max_retries
         self.timeout = timeout
 
@@ -76,6 +73,7 @@ class AsyncLLMClient:
         self,
         messages: list[dict[str, str]],
         response_model: type[T],
+        temperature: float | None = None,
         **kwargs: Any,
     ) -> tuple[T, UsageInfo | None, CostInfo | None]:
         """
@@ -84,6 +82,7 @@ class AsyncLLMClient:
         Args:
             messages: List of message dicts with 'role' and 'content'
             response_model: Pydantic model for response structure
+            temperature: Optional temperature override (uses default if None)
             **kwargs: Additional arguments to pass to instructor
 
         Returns:
@@ -91,6 +90,9 @@ class AsyncLLMClient:
         """
         async with self.semaphore:
             try:
+                # Use provided temperature or default to 0.0
+                effective_temp = temperature if temperature is not None else 0.0
+
                 # Log the conversation for debugging (without truncation)
                 logger.debug(f"=== LLM Request ({response_model.__name__}) ===")
                 for msg in messages:
@@ -102,7 +104,7 @@ class AsyncLLMClient:
                     model=self.model,
                     messages=messages,  # type: ignore
                     response_model=response_model,
-                    temperature=self.temperature,
+                    temperature=effective_temp,
                     **kwargs,
                 )
 

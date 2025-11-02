@@ -94,12 +94,9 @@ const customFields = computed(() => {
             />
             <span>Abstract</span>
         </button>
-        <div
-            v-if="hasAbstract"
-            class="paper-abstract"
-            :class="{ expanded: abstractExpanded }"
-            v-html="escapeHtml(paper.abstract)"
-        ></div>
+        <div v-if="hasAbstract" class="paper-abstract" :class="{ expanded: abstractExpanded }">
+            <MarkdownRenderer :content="paper.abstract" :inline="true" />
+        </div>
 
         <div v-if="isStage3 && paper.stage3" class="scores">
             <div class="score-item">

@@ -18,7 +18,6 @@ llm:
   model: "deepseek-chat"
   api_key: ${API_KEY}
   base_url: "https://api.deepseek.com"
-  temperature: 0.0
   max_concurrent: 10
   timeout: 60
 
@@ -35,14 +34,17 @@ user_prompt: 和大语言模型相关的论文。用中文回答。
 stage1:
   enabled: true
   threshold: 0.5
+  temperature: 0.0
 
 stage2:
   enabled: true
   threshold: 0.7
+  temperature: 0.1
 
 stage3:
   enabled: true
   threshold: 0.8
+  temperature: 0.3
   max_text_chars: 40000
   custom_fields:
     - name: "key_innovations"
@@ -53,6 +55,12 @@ stage3:
       description: "指出论文的局限性、潜在问题或未来需要改进的地方"
     - name: "potential_impact"
       description: "评估论文对该领域的潜在影响，包括应用价值和研究意义"
+
+# ============================================
+# Abstract Highlighting Settings
+# ============================================
+highlight:
+  temperature: 0.0
 
 # ============================================
 # Cache Settings

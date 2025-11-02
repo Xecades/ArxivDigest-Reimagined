@@ -34,6 +34,14 @@ const Stage3ResultSchema = BaseStageResultSchema.extend({
     custom_fields: z.record(z.string()).optional(),
 });
 
+// Highlight result schema (for abstract highlighting)
+const HighlightResultSchema = z.object({
+    messages: z.array(MessageSchema),
+    usage: UsageSchema,
+    estimated_cost: z.number().nullable(),
+    estimated_cost_currency: z.string().nullable(),
+});
+
 // Paper schema
 const PaperSchema = z.object({
     arxiv_id: z.string(),
@@ -48,6 +56,7 @@ const PaperSchema = z.object({
     stage1: BaseStageResultSchema,
     stage2: BaseStageResultSchema.nullable(),
     stage3: Stage3ResultSchema.nullable(),
+    highlight: HighlightResultSchema.nullable(),
 });
 
 // Metadata schema
@@ -61,12 +70,23 @@ const MetadataSchema = z.object({
     }),
     llm_config: z.object({
         model: z.string(),
-        temperature: z.number(),
     }),
-    stage_thresholds: z.object({
-        stage1: z.number(),
-        stage2: z.number(),
-        stage3: z.number(),
+    stage_config: z.object({
+        stage1: z.object({
+            threshold: z.number(),
+            temperature: z.number(),
+        }),
+        stage2: z.object({
+            threshold: z.number(),
+            temperature: z.number(),
+        }),
+        stage3: z.object({
+            threshold: z.number(),
+            temperature: z.number(),
+        }),
+        highlight: z.object({
+            temperature: z.number(),
+        }),
     }),
     custom_fields: z.array(
         z.object({
@@ -93,6 +113,7 @@ export type Message = z.infer<typeof MessageSchema>;
 export type UsageInfo = z.infer<typeof UsageSchema>;
 export type BaseStageResult = z.infer<typeof BaseStageResultSchema>;
 export type Stage3Result = z.infer<typeof Stage3ResultSchema>;
+export type HighlightResult = z.infer<typeof HighlightResultSchema>;
 export type Paper = z.infer<typeof PaperSchema>;
 export type Metadata = z.infer<typeof MetadataSchema>;
 export type DigestData = z.infer<typeof DigestSchema>;

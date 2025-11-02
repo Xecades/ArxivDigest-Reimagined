@@ -4,9 +4,13 @@ import MarkdownIt from "markdown-it";
 import markdownItKatex from "markdown-it-katex";
 import markdownItPangu from "markdown-it-pangu-ts";
 
-const props = defineProps<{
-    content: string;
-}>();
+const props = withDefaults(
+    defineProps<{
+        content: string;
+        inline?: boolean;
+    }>(),
+    { inline: false },
+);
 
 const renderedHtml = ref("");
 
@@ -25,7 +29,11 @@ const md = new MarkdownIt({
 
 function renderMarkdown() {
     try {
-        renderedHtml.value = md.render(props.content);
+        if (props.inline) {
+            renderedHtml.value = md.renderInline(props.content);
+        } else {
+            renderedHtml.value = md.render(props.content);
+        }
     } catch (e) {
         console.error("Markdown rendering error:", e);
         renderedHtml.value = `<p>${props.content}</p>`;
@@ -37,7 +45,7 @@ onMounted(() => {
 });
 
 watch(
-    () => props.content,
+    () => [props.content, props.inline],
     () => {
         renderMarkdown();
     },

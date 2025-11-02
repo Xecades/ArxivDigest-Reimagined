@@ -1,4 +1,4 @@
-"""Stage 3 filter: Deep analysis based on full paper content."""
+"""Stage 3 filter: Deep analysis with full paper content."""
 
 from loguru import logger
 
@@ -23,6 +23,7 @@ class Stage3Filter:
         cache_manager: CacheManager,
         html_crawler: ArxivHTMLCrawler,
         threshold: float = 0.8,
+        temperature: float = 0.3,
         max_text_chars: int = 8000,
         custom_fields: list[dict[str, str]] | None = None,
         config_hash: str | None = None,
@@ -35,6 +36,7 @@ class Stage3Filter:
             cache_manager: Cache manager for storing results
             html_crawler: HTML crawler for fetching papers
             threshold: Score threshold for passing (0-1)
+            temperature: LLM temperature for sampling (0-1)
             max_text_chars: Maximum characters to extract from paper
             custom_fields: List of custom field dicts with 'name' and 'description'
             config_hash: Configuration hash for cache invalidation
@@ -43,6 +45,7 @@ class Stage3Filter:
         self.cache_manager = cache_manager
         self.html_crawler = html_crawler
         self.threshold = threshold
+        self.temperature = temperature
         self.max_text_chars = max_text_chars
         self.custom_fields = custom_fields or []
         self.config_hash = config_hash
@@ -54,7 +57,7 @@ class Stage3Filter:
         field_names = [f.get("name", "") for f in self.custom_fields if f.get("name")]
 
         logger.info(
-            f"Stage3Filter initialized: threshold={threshold}, "
+            f"Stage3Filter initialized: threshold={threshold}, temperature={temperature}, "
             f"max_chars={max_text_chars}, custom_fields={field_names}"
         )
 
@@ -129,7 +132,9 @@ class Stage3Filter:
                 ]
 
                 # Call LLM in parallel
-                results = await self.llm_client.complete_batch(batch_messages, Stage3Result)
+                results = await self.llm_client.complete_batch(
+                    batch_messages, Stage3Result, temperature=self.temperature
+                )
 
                 # Convert to dicts with pass_filter, messages and cache results
                 evaluated_results = []

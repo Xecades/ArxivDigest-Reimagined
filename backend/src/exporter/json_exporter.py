@@ -23,6 +23,7 @@ class JSONExporter:
     def export(
         self,
         pipeline_results: dict,
+        highlight_info: dict[str, dict],
         config: dict,
         output_path: str = "frontend/public/digest.json",
         title: str = "ArXiv Digest - Reimagined",
@@ -32,6 +33,7 @@ class JSONExporter:
 
         Args:
             pipeline_results: Dictionary with all stage results from FilterPipeline
+            highlight_info: Dictionary with highlight conversation info for each paper
             config: Full configuration dictionary
             output_path: Output file path (relative to project root)
             title: Digest title
@@ -63,7 +65,7 @@ class JSONExporter:
         )
 
         # Prepare papers data
-        papers_data = self._prepare_papers_data(pipeline_results)
+        papers_data = self._prepare_papers_data(pipeline_results, highlight_info)
 
         # Combine into final structure
         output_data = {
@@ -96,6 +98,7 @@ class JSONExporter:
         stage1_config = config.get("stage1", {})
         stage2_config = config.get("stage2", {})
         stage3_config = config.get("stage3", {})
+        highlight_config = config.get("highlight", {})
 
         return {
             "title": title,
@@ -107,12 +110,23 @@ class JSONExporter:
             },
             "llm_config": {
                 "model": llm_config.get("model", "unknown"),
-                "temperature": llm_config.get("temperature", 0.0),
             },
-            "stage_thresholds": {
-                "stage1": stage1_config.get("threshold", 0.5),
-                "stage2": stage2_config.get("threshold", 0.7),
-                "stage3": stage3_config.get("threshold", 0.8),
+            "stage_config": {
+                "stage1": {
+                    "threshold": stage1_config.get("threshold", 0.5),
+                    "temperature": stage1_config.get("temperature", 0.0),
+                },
+                "stage2": {
+                    "threshold": stage2_config.get("threshold", 0.7),
+                    "temperature": stage2_config.get("temperature", 0.1),
+                },
+                "stage3": {
+                    "threshold": stage3_config.get("threshold", 0.8),
+                    "temperature": stage3_config.get("temperature", 0.3),
+                },
+                "highlight": {
+                    "temperature": highlight_config.get("temperature", 0.0),
+                },
             },
             "custom_fields": stage3_config.get("custom_fields", {}),
             "stats": {
@@ -123,12 +137,15 @@ class JSONExporter:
             },
         }
 
-    def _prepare_papers_data(self, pipeline_results: dict) -> list[dict]:
+    def _prepare_papers_data(
+        self, pipeline_results: dict, highlight_info: dict[str, dict]
+    ) -> list[dict]:
         """
         Prepare papers data for JSON export.
 
         Args:
             pipeline_results: Pipeline results dictionary
+            highlight_info: Highlight conversation info for each paper
 
         Returns:
             List of paper data dictionaries
@@ -150,6 +167,7 @@ class JSONExporter:
                 "stage1": self._format_stage_result(result),
                 "stage2": None,
                 "stage3": None,
+                "highlight": None,  # Will be added for stage3 papers
                 "max_stage": 1 if result["pass_filter"] else 0,
             }
 
@@ -170,6 +188,9 @@ class JSONExporter:
                 papers_map[paper_id]["stage3"] = self._format_stage_result(result, is_stage3=True)
                 if result["pass_filter"]:
                     papers_map[paper_id]["max_stage"] = 3
+                    # Add highlight info if available
+                    if paper_id in highlight_info:
+                        papers_map[paper_id]["highlight"] = highlight_info[paper_id]
 
         # Convert to list and sort by max_stage (descending) and score
         papers_list = list(papers_map.values())

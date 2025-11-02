@@ -26,8 +26,11 @@ class FilterPipeline:
         cache_manager: CacheManager,
         html_crawler: ArxivHTMLCrawler,
         stage1_threshold: float = 0.5,
+        stage1_temperature: float = 0.0,
         stage2_threshold: float = 0.7,
+        stage2_temperature: float = 0.1,
         stage3_threshold: float = 0.8,
+        stage3_temperature: float = 0.3,
         stage3_max_chars: int = 8000,
         custom_fields: list[dict[str, str]] | None = None,
         config_hash: str | None = None,
@@ -40,8 +43,11 @@ class FilterPipeline:
             cache_manager: Cache manager
             html_crawler: HTML crawler
             stage1_threshold: Threshold for Stage 1 (0-1)
+            stage1_temperature: Temperature for Stage 1 (0-1)
             stage2_threshold: Threshold for Stage 2 (0-1)
+            stage2_temperature: Temperature for Stage 2 (0-1)
             stage3_threshold: Threshold for Stage 3 (0-1)
+            stage3_temperature: Temperature for Stage 3 (0-1)
             stage3_max_chars: Max characters for Stage 3 text extraction
             custom_fields: List of custom field dicts with 'name' and 'description'
             config_hash: Configuration hash for cache invalidation
@@ -56,6 +62,7 @@ class FilterPipeline:
             llm_client=llm_client,
             cache_manager=cache_manager,
             threshold=stage1_threshold,
+            temperature=stage1_temperature,
             config_hash=config_hash,
         )
 
@@ -63,6 +70,7 @@ class FilterPipeline:
             llm_client=llm_client,
             cache_manager=cache_manager,
             threshold=stage2_threshold,
+            temperature=stage2_temperature,
             config_hash=config_hash,
         )
 
@@ -71,6 +79,7 @@ class FilterPipeline:
             cache_manager=cache_manager,
             html_crawler=html_crawler,
             threshold=stage3_threshold,
+            temperature=stage3_temperature,
             max_text_chars=stage3_max_chars,
             custom_fields=custom_fields,
             config_hash=config_hash,
@@ -78,9 +87,9 @@ class FilterPipeline:
 
         logger.info(
             f"FilterPipeline initialized: "
-            f"stage1_threshold={stage1_threshold}, "
-            f"stage2_threshold={stage2_threshold}, "
-            f"stage3_threshold={stage3_threshold}"
+            f"stage1_threshold={stage1_threshold}, stage1_temperature={stage1_temperature}, "
+            f"stage2_threshold={stage2_threshold}, stage2_temperature={stage2_temperature}, "
+            f"stage3_threshold={stage3_threshold}, stage3_temperature={stage3_temperature}"
         )
 
     async def run(

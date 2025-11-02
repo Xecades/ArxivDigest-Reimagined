@@ -3,7 +3,7 @@
 import hashlib
 import json
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from diskcache import Cache
 from loguru import logger
@@ -38,15 +38,19 @@ class CacheManager:
         # Separate caches for each stage
         self.stage1_cache = Cache(
             str(self.cache_dir / "stage1"),
-            size_limit=size_limit // 3,
+            size_limit=size_limit // 4,
         )
         self.stage2_cache = Cache(
             str(self.cache_dir / "stage2"),
-            size_limit=size_limit // 3,
+            size_limit=size_limit // 4,
         )
         self.stage3_cache = Cache(
             str(self.cache_dir / "stage3"),
-            size_limit=size_limit // 3,
+            size_limit=size_limit // 4,
+        )
+        self.highlight_cache = Cache(
+            str(self.cache_dir / "highlight"),
+            size_limit=size_limit // 4,
         )
 
         self.expire_seconds = expire_days * 24 * 3600
@@ -57,18 +61,20 @@ class CacheManager:
             f"expire_days={expire_days})"
         )
 
-    def _get_cache_by_stage(self, stage: int) -> Cache:
+    def _get_cache_by_stage(self, stage: int | str) -> Cache:
         """Get the cache object for a specific stage."""
-        if stage == 1:
+        if stage == 1 or stage == "stage1":
             return self.stage1_cache
-        elif stage == 2:
+        elif stage == 2 or stage == "stage2":
             return self.stage2_cache
-        elif stage == 3:
+        elif stage == 3 or stage == "stage3":
             return self.stage3_cache
+        elif stage == "highlight":
+            return self.highlight_cache
         else:
-            raise ValueError(f"Invalid stage: {stage}, must be 1, 2, or 3")
+            raise ValueError(f"Invalid stage: {stage}, must be 1, 2, 3, or 'highlight'")
 
-    def _generate_key(self, paper_id: str, config_hash: Optional[str] = None) -> str:
+    def _generate_key(self, paper_id: str, config_hash: str | None = None) -> str:
         """
         Generate a cache key for a paper.
 
@@ -100,15 +106,15 @@ class CacheManager:
 
     def get(
         self,
-        stage: int,
+        stage: int | str,
         paper_id: str,
-        config_hash: Optional[str] = None,
-    ) -> Optional[Any]:
+        config_hash: str | None = None,
+    ) -> Any | None:
         """
         Retrieve cached result for a paper.
 
         Args:
-            stage: Stage number (1, 2, or 3)
+            stage: Stage number (1, 2, 3) or 'highlight'
             paper_id: arXiv paper ID
             config_hash: Optional configuration hash
 
@@ -120,24 +126,24 @@ class CacheManager:
 
         result = cache.get(key)
         if result is not None:
-            logger.debug(f"Cache HIT: stage{stage}/{key}")
+            logger.debug(f"Cache HIT: {stage}/{key}")
         else:
-            logger.debug(f"Cache MISS: stage{stage}/{key}")
+            logger.debug(f"Cache MISS: {stage}/{key}")
 
         return result
 
     def set(
         self,
-        stage: int,
+        stage: int | str,
         paper_id: str,
         result: Any,
-        config_hash: Optional[str] = None,
+        config_hash: str | None = None,
     ) -> None:
         """
         Store result in cache.
 
         Args:
-            stage: Stage number (1, 2, or 3)
+            stage: Stage number (1, 2, 3) or 'highlight'
             paper_id: arXiv paper ID
             result: Result to cache
             config_hash: Optional configuration hash
@@ -146,19 +152,19 @@ class CacheManager:
         key = self._generate_key(paper_id, config_hash)
 
         cache.set(key, result, expire=self.expire_seconds)
-        logger.debug(f"Cache SET: stage{stage}/{key}")
+        logger.debug(f"Cache SET: {stage}/{key}")
 
     def exists(
         self,
-        stage: int,
+        stage: int | str,
         paper_id: str,
-        config_hash: Optional[str] = None,
+        config_hash: str | None = None,
     ) -> bool:
         """
         Check if a result exists in cache.
 
         Args:
-            stage: Stage number (1, 2, or 3)
+            stage: Stage number (1, 2, 3) or 'highlight'
             paper_id: arXiv paper ID
             config_hash: Optional configuration hash
 
@@ -171,15 +177,15 @@ class CacheManager:
 
     def delete(
         self,
-        stage: int,
+        stage: int | str,
         paper_id: str,
-        config_hash: Optional[str] = None,
+        config_hash: str | None = None,
     ) -> bool:
         """
         Delete a cached result.
 
         Args:
-            stage: Stage number (1, 2, or 3)
+            stage: Stage number (1, 2, 3) or 'highlight'
             paper_id: arXiv paper ID
             config_hash: Optional configuration hash
 
@@ -191,35 +197,36 @@ class CacheManager:
 
         if key in cache:
             del cache[key]
-            logger.debug(f"Cache DELETE: stage{stage}/{key}")
+            logger.debug(f"Cache DELETE: {stage}/{key}")
             return True
 
         return False
 
-    def clear_stage(self, stage: int) -> None:
+    def clear_stage(self, stage: int | str) -> None:
         """
         Clear all cached results for a specific stage.
 
         Args:
-            stage: Stage number (1, 2, or 3)
+            stage: Stage number (1, 2, 3) or 'highlight'
         """
         cache = self._get_cache_by_stage(stage)
         cache.clear()
-        logger.info(f"Cleared stage {stage} cache")
+        logger.info(f"Cleared {stage} cache")
 
     def clear_all(self) -> None:
         """Clear all cached results from all stages."""
         self.stage1_cache.clear()
         self.stage2_cache.clear()
         self.stage3_cache.clear()
+        self.highlight_cache.clear()
         logger.info("Cleared all caches")
 
-    def get_stats(self, stage: Optional[int] = None) -> dict:
+    def get_stats(self, stage: int | str | None = None) -> dict:
         """
         Get cache statistics.
 
         Args:
-            stage: Optional stage number (1, 2, or 3). If None, returns stats for all stages.
+            stage: Optional stage number (1, 2, 3) or 'highlight'. If None, returns stats for all stages.
 
         Returns:
             Dictionary with cache statistics
@@ -227,29 +234,34 @@ class CacheManager:
         if stage is not None:
             cache = self._get_cache_by_stage(stage)
             return {
-                f"stage{stage}": {
-                    "size": len(cache),
+                str(stage): {
+                    "size": len(cache),  # type: ignore
                     "volume": cache.volume(),
-                    "size_limit": cache.size_limit,
+                    "size_limit": cache.size_limit,  # type: ignore
                 }
             }
 
         # Return stats for all stages
         return {
             "stage1": {
-                "size": len(self.stage1_cache),
+                "size": len(self.stage1_cache),  # type: ignore
                 "volume": self.stage1_cache.volume(),
-                "size_limit": self.stage1_cache.size_limit,
+                "size_limit": self.stage1_cache.size_limit,  # type: ignore
             },
             "stage2": {
-                "size": len(self.stage2_cache),
+                "size": len(self.stage2_cache),  # type: ignore
                 "volume": self.stage2_cache.volume(),
-                "size_limit": self.stage2_cache.size_limit,
+                "size_limit": self.stage2_cache.size_limit,  # type: ignore
             },
             "stage3": {
-                "size": len(self.stage3_cache),
+                "size": len(self.stage3_cache),  # type: ignore
                 "volume": self.stage3_cache.volume(),
-                "size_limit": self.stage3_cache.size_limit,
+                "size_limit": self.stage3_cache.size_limit,  # type: ignore
+            },
+            "highlight": {
+                "size": len(self.highlight_cache),  # type: ignore
+                "volume": self.highlight_cache.volume(),
+                "size_limit": self.highlight_cache.size_limit,  # type: ignore
             },
         }
 
@@ -258,6 +270,7 @@ class CacheManager:
         self.stage1_cache.close()
         self.stage2_cache.close()
         self.stage3_cache.close()
+        self.highlight_cache.close()
         logger.debug("Cache manager closed")
 
     def __enter__(self):

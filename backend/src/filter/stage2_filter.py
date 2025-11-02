@@ -19,6 +19,7 @@ class Stage2Filter:
         llm_client: AsyncLLMClient,
         cache_manager: CacheManager,
         threshold: float = 0.7,
+        temperature: float = 0.1,
         config_hash: str | None = None,
     ):
         """
@@ -28,14 +29,16 @@ class Stage2Filter:
             llm_client: Async LLM client for evaluation
             cache_manager: Cache manager for storing results
             threshold: Score threshold for passing (0-1)
+            temperature: LLM temperature for sampling (0-1)
             config_hash: Configuration hash for cache invalidation
         """
         self.llm_client = llm_client
         self.cache_manager = cache_manager
         self.threshold = threshold
+        self.temperature = temperature
         self.config_hash = config_hash
 
-        logger.info(f"Stage2Filter initialized: threshold={threshold}")
+        logger.info(f"Stage2Filter initialized: threshold={threshold}, temperature={temperature}")
 
     async def filter_batch(
         self,
@@ -86,7 +89,9 @@ class Stage2Filter:
             ]
 
             # Call LLM in parallel
-            results = await self.llm_client.complete_batch(batch_messages, Stage2Result)
+            results = await self.llm_client.complete_batch(
+                batch_messages, Stage2Result, temperature=self.temperature
+            )
 
             # Convert to dicts with pass_filter, messages and cache results
             evaluated_results = []

@@ -13,6 +13,7 @@ from loguru import logger
 from src.cache import CacheManager
 from src.fetcher import ArxivHTMLCrawler, fetch_arxiv_papers
 from src.filter.pipeline import FilterPipeline
+from src.highlighter import AbstractHighlighter
 from src.llm.async_client import AsyncLLMClient
 
 
@@ -48,6 +49,7 @@ async def async_main(config: dict) -> None:
     stage1_config = config.get("stage1", {})
     stage2_config = config.get("stage2", {})
     stage3_config = config.get("stage3", {})
+    highlight_config = config.get("highlight", {})
 
     # Validate API key
     api_key = llm_config.get("api_key", "")
@@ -70,7 +72,6 @@ async def async_main(config: dict) -> None:
         api_key=api_key,
         base_url=llm_config.get("base_url"),
         model=llm_config.get("model", "gpt-4o-mini"),
-        temperature=llm_config.get("temperature", 0.0),
         max_concurrent=llm_config.get("max_concurrent", 10),
         timeout=llm_config.get("timeout", 60),
     )
@@ -92,6 +93,7 @@ async def async_main(config: dict) -> None:
         "stage1": stage1_config,
         "stage2": stage2_config,
         "stage3": stage3_config,
+        "highlight": highlight_config,
         "model": llm_config.get("model"),
     }
     config_hash = hashlib.sha256(json.dumps(config_for_hash, sort_keys=True).encode()).hexdigest()[
@@ -104,8 +106,11 @@ async def async_main(config: dict) -> None:
         cache_manager=cache_manager,
         html_crawler=html_crawler,
         stage1_threshold=stage1_config.get("threshold", 0.5),
+        stage1_temperature=stage1_config.get("temperature", 0.0),
         stage2_threshold=stage2_config.get("threshold", 0.7),
+        stage2_temperature=stage2_config.get("temperature", 0.1),
         stage3_threshold=stage3_config.get("threshold", 0.8),
+        stage3_temperature=stage3_config.get("temperature", 0.3),
         stage3_max_chars=stage3_config.get("max_text_chars", 8000),
         custom_fields=stage3_config.get("custom_fields", []),
         config_hash=config_hash,
@@ -127,6 +132,43 @@ async def async_main(config: dict) -> None:
     # Run filtering pipeline
     results = await pipeline.run(papers, user_prompt)
 
+    # Highlight abstracts for papers that passed stage3
+    logger.info("Highlighting abstracts for Stage 3 papers...")
+    highlighter = AbstractHighlighter(
+        llm_client=llm_client,
+        cache_manager=cache_manager,
+        temperature=highlight_config.get("temperature", 0.0),
+        config_hash=config_hash,
+    )
+
+    # Collect stage3 passed papers with their abstracts
+    stage3_papers_map = {
+        paper["id"]: paper
+        for paper, result in results["stage3_results"]
+        if result and result["pass_filter"]
+    }
+
+    highlight_info_map: dict[str, dict] = {}
+    if stage3_papers_map:
+        abstracts_to_highlight = [
+            (paper_id, paper["abstract"]) for paper_id, paper in stage3_papers_map.items()
+        ]
+
+        # Highlight in batch and get both highlighted abstracts and conversation info
+        highlighted_abstracts_map, highlight_info_map = await highlighter.highlight_batch(
+            abstracts_to_highlight,
+            user_context=user_prompt,
+        )
+
+        # Update papers with highlighted abstracts
+        for paper_id, highlighted in highlighted_abstracts_map.items():
+            if paper_id in stage3_papers_map:
+                stage3_papers_map[paper_id]["abstract"] = highlighted
+
+        logger.info(f"Highlighted {len(highlighted_abstracts_map)} abstracts")
+    else:
+        logger.info("No Stage 3 papers to highlight")
+
     # Generate JSON output
     logger.info("Generating JSON output...")
     from src.exporter import JSONExporter
@@ -135,6 +177,7 @@ async def async_main(config: dict) -> None:
     output_path = Path("../frontend/public/digest.json")
     exporter.export(
         pipeline_results=results,
+        highlight_info=highlight_info_map,
         config=config,
         output_path=str(output_path),
         title="ArXiv Digest - Reimagined",
