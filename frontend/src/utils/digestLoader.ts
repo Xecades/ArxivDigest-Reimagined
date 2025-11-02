@@ -5,7 +5,7 @@ import { DigestSchema, type DigestData } from "@/types/digest";
  */
 export async function loadDigestData(): Promise<DigestData> {
     try {
-        const response = await fetch("/digest.json");
+        const response = await fetch("./digest.json");
         if (!response.ok) {
             throw new Error(`Failed to fetch digest.json: ${response.statusText}`);
         }
