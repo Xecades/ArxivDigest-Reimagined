@@ -27,13 +27,6 @@ def load_config(config_path: str = "config.yaml") -> dict[str, Any]:
     with open(config_file) as f:
         config: dict[str, Any] = yaml.safe_load(f)
 
-    # Replace environment variables
-    if "llm" in config and "api_key" in config["llm"]:
-        api_key = config["llm"]["api_key"]
-        if isinstance(api_key, str) and api_key.startswith("${") and api_key.endswith("}"):
-            env_var = api_key[2:-1]
-            config["llm"]["api_key"] = os.getenv(env_var, "")
-
     return config
 
 
@@ -51,10 +44,12 @@ async def async_main(config: dict) -> None:
     stage3_config = config.get("stage3", {})
     highlight_config = config.get("highlight", {})
 
-    # Validate API key
-    api_key = llm_config.get("api_key", "")
+    # Get API key from environment variable
+    api_key = os.getenv("API_KEY", "")
     if not api_key:
-        logger.error("OpenAI API key not found. Set OPENAI_API_KEY environment variable.")
+        logger.error(
+            "API_KEY environment variable not found. Please set API_KEY in your environment."
+        )
         sys.exit(1)
 
     # Initialize components
@@ -120,6 +115,7 @@ async def async_main(config: dict) -> None:
     logger.info("Fetching papers from arXiv...")
     papers = fetch_arxiv_papers(
         categories=arxiv_config.get("categories", []),
+        field=arxiv_config.get("field", "cs"),
         max_results=arxiv_config.get("max_results", 0),
     )
 

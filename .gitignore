@@ -162,5 +162,10 @@ cython_debug/
 # vim
 *.sw*
 
-digest.json
-data
+# Backend cache and data
+backend/.cache/
+backend/data/
+backend/config.yaml
+
+# Generated digest file
+frontend/public/digest.json

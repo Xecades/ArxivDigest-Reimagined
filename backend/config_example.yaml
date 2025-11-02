@@ -1,22 +1,20 @@
 # ArxivDigest-Reimagined Configuration
-# Three-stage progressive filtering pipeline
 
 # ============================================
 # arXiv Query Settings
 # ============================================
 arxiv:
+  field: "cs" # arXiv field abbreviation (check https://arxiv.org/ for field codes)
   categories:
     - "Computer Vision and Pattern Recognition"
     - "Artificial Intelligence"
-    - "Robotics"
-  max_results: 10
+  max_results: 40 # 0 means no limit
 
 # ============================================
 # LLM Settings
 # ============================================
 llm:
-  model: "deepseek-chat"
-  api_key: ${API_KEY}
+  model: "deepseek-chat" # only tested with deepseek-chat
   base_url: "https://api.deepseek.com"
   max_concurrent: 10
   timeout: 60
@@ -24,12 +22,11 @@ llm:
 # ============================================
 # Three-Stage Filtering
 # ============================================
-# user_prompt: |
-#   和 VLN (Vision-Language Navigation) / VLA (Vision Language Action) 相关；
-#   其中和"无图目标导航"任务相关的工作优先级更高；
-#   重点关注室内场景下的导航任务；
-#   用中文回答原因。
-user_prompt: 和大语言模型相关的论文。用中文回答。
+user_prompt: |
+  Related to (M)LLMs.
+  Not related to language-specific models or applications.
+  Do not include surveys.
+  Always answer in Chinese.
 
 stage1:
   enabled: true
@@ -45,16 +42,26 @@ stage3:
   enabled: true
   threshold: 0.8
   temperature: 0.3
-  max_text_chars: 40000
+  max_text_chars: 40000 # Maximum number of characters from the paper text (title + abstract) to include
   custom_fields:
     - name: "key_innovations"
-      description: "列出论文的核心创新点和主要贡献，包括新方法、新技术或新发现"
+      description: |
+        List the core innovations and main contributions of the paper,
+        including new methods, technologies, or discoveries
     - name: "technical_approach"
-      description: "概述论文使用的技术方法和实现细节，包括模型架构、算法或实验设计"
+      description: |
+        Outline the technical methods used in the paper,
+        including model architecture, algorithms, or experimental design
     - name: "limitations"
-      description: "指出论文的局限性、潜在问题或未来需要改进的地方"
+      description: |
+        Identify the limitations, potential issues, or areas for future improvement in the paper
     - name: "potential_impact"
-      description: "评估论文对该领域的潜在影响，包括应用价值和研究意义"
+      description: |
+        Assess the potential impact of the paper on the field,
+        including practical applications and research significance
+    # - name: "is_100_percent_relevant"
+    #   description: |
+    #     Whether the paper is 100% relevant to the user prompt
 
 # ============================================
 # Abstract Highlighting Settings

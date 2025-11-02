@@ -138,12 +138,32 @@ class Stage3Filter:
 
                 # Convert to dicts with pass_filter, messages and cache results
                 evaluated_results = []
-                for (paper, _), messages, (result, usage, cost_info) in zip(
+                for (paper, _), messages, result in zip(
                     papers_with_text, batch_messages, results, strict=True
                 ):
-                    result_dict = prepare_result_with_conversation(
-                        result, self.threshold, messages, usage, cost_info
-                    )
+                    if result is None:
+                        # LLM call failed, create a default failing result
+                        logger.warning(
+                            f"Stage 3: Paper {paper['id']} failed LLM call, marking as not passed"
+                        )
+                        result_dict = {
+                            "pass_filter": False,
+                            "score": 0.0,
+                            "reasoning": "LLM call failed",
+                            "novelty_score": 0.0,
+                            "impact_score": 0.0,
+                            "quality_score": 0.0,
+                            "custom_fields": {},
+                            "messages": messages,
+                            "usage": None,
+                            "estimated_cost": None,
+                            "estimated_cost_currency": None,
+                        }
+                    else:
+                        result_obj, usage, cost_info = result
+                        result_dict = prepare_result_with_conversation(
+                            result_obj, self.threshold, messages, usage, cost_info
+                        )
                     self.cache_manager.set(3, paper["id"], result_dict, self.config_hash)
                     evaluated_results.append((paper, result_dict))
 

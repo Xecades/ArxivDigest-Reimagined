@@ -158,15 +158,16 @@ class AsyncLLMClient:
         tasks = [self.complete(messages, response_model, **kwargs) for messages in batch_messages]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        # Filter out exceptions and log them
-        valid_results: list[tuple[T, UsageInfo | None, CostInfo | None]] = []
+        # Convert exceptions to None to maintain list length consistency
+        processed_results: list[tuple[T, UsageInfo | None, CostInfo | None] | None] = []
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 logger.error(f"Batch request {i} failed: {result}")
+                processed_results.append(None)  # type: ignore[arg-type]
             else:
-                valid_results.append(result)  # type: ignore[arg-type]
+                processed_results.append(result)  # type: ignore[arg-type]
 
-        return valid_results
+        return processed_results  # type: ignore[return-value]
 
     def build_stage1_messages(
         self,
