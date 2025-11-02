@@ -6,10 +6,6 @@
 
 ![](assets/readme-image.png)
 
-## 📚 Table of Contents
-
-[toc]
-
 ## 🌟 Features
 
 -   **Three-Stage Progressive Filtering**: Efficiently narrows down papers through increasingly detailed analysis
