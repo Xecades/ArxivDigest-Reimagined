@@ -69,7 +69,7 @@ const customFields = computed(() => {
         </div>
 
         <div class="paper-meta">
-            <div class="authors">
+            <div class="authors" :title="paper.authors.join(', ')">
                 <strong><FontAwesomeIcon icon="users" class="meta-icon" />Authors:</strong>
                 {{ paper.authors.join(", ") }}
             </div>

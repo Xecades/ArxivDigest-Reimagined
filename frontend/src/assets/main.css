@@ -36,7 +36,7 @@ header {
 
 header h1 {
     font-size: 2.5em;
-    margin-bottom: 10px;
+    margin-bottom: 25px;
 }
 
 header .timestamp {
@@ -198,11 +198,14 @@ header .timestamp {
 .paper-meta {
     color: #666;
     font-size: 0.9em;
-    margin-bottom: 15px;
+    margin-bottom: 5px;
 }
 
 .authors {
     margin-bottom: 8px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .categories {
@@ -228,7 +231,6 @@ header .timestamp {
     padding: 8px 0;
     display: flex;
     align-items: center;
-    gap: 5px;
     transition: color 0.3s ease;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
@@ -241,6 +243,11 @@ header .timestamp {
 .abstract-toggle-icon {
     transition: transform 0.3s ease;
     display: inline-block;
+    margin-right: 5px;
+    width: 16px;
+    line-height: 1em;
+    text-align: center;
+    vertical-align: middle;
 }
 
 .abstract-toggle.expanded .abstract-toggle-icon {
@@ -248,8 +255,9 @@ header .timestamp {
 }
 
 .paper-abstract {
-    color: #555;
-    margin-bottom: 15px;
+    color: #666;
+    margin-bottom: 8px;
+    font-size: 0.9em;
     line-height: 1.7;
     max-height: 0;
     overflow: hidden;
@@ -274,6 +282,7 @@ header .timestamp {
 }
 
 .score-label {
+    width: 55px;
     font-weight: 600;
     color: #666;
     font-size: 0.9em;
@@ -376,6 +385,7 @@ header .timestamp {
     max-width: 900px;
     width: 90%;
     max-height: 85vh;
+    overflow: hidden;
     overflow-y: auto;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     animation: slideUp 0.3s ease;
@@ -399,15 +409,18 @@ header .timestamp {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-radius: 12px 12px 0 0;
     position: sticky;
     top: 0;
     z-index: 1;
+    gap: 15px;
 }
 
 .modal-title {
     font-size: 1.3em;
     font-weight: 600;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .modal-close {
@@ -423,6 +436,7 @@ header .timestamp {
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
+    flex-shrink: 0;
 }
 
 .modal-close:hover {
@@ -471,7 +485,7 @@ header .timestamp {
 }
 
 .message-assistant {
-    background: #f8f9fa;
+    background: #faf6ff;
     border-left: 4px solid #764ba2;
 }
 
@@ -532,16 +546,16 @@ header .timestamp {
 }
 
 .message-content {
-    color: #333;
+    color: #555;
     white-space: pre-wrap;
     word-wrap: break-word;
+    font-size: 0.9em;
 }
 
 .message-content pre {
     margin: 0;
     white-space: pre-wrap;
-    font-family: "Courier New", monospace;
-    font-size: 0.9em;
+    font-family: monospace;
 }
 
 .custom-fields {
@@ -617,15 +631,25 @@ footer {
     }
 
     .stage-selector {
-        justify-content: flex-start;
-        gap: 8px;
+        width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
         flex-wrap: nowrap;
-        padding-bottom: 5px;
+        gap: 8px;
+        padding-bottom: 8px;
+        scrollbar-width: thin;
+        scrollbar-color: #667eea #e9ecef;
+    }
+
+    .stage-selector::-webkit-scrollbar {
+        height: 4px;
     }
 
     .stage-btn {
         padding: 8px 15px;
         font-size: 0.85em;
+        /* 防止按钮被压缩 */
+        min-width: fit-content;
     }
 
     .stats {
@@ -746,11 +770,17 @@ footer {
 
     .stage-selector {
         gap: 6px;
+        padding-bottom: 8px;
+        /* 确保小屏幕也能滚动 */
+        width: 100%;
+        overflow-x: auto;
     }
 
     .stage-btn {
         padding: 6px 12px;
         font-size: 0.8em;
+        /* 确保按钮不会太小 */
+        min-width: fit-content;
     }
 
     .papers-container {

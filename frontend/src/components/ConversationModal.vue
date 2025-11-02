@@ -1,23 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import type { Paper, Message, UsageInfo } from "@/types/digest";
 import { escapeHtml, formatCost } from "@/utils/formatters";
 
-const props = defineProps<{
-    paper: Paper;
-}>();
-
-const emit = defineEmits<{
-    close: [];
-}>();
+const props = defineProps<{ paper: Paper }>();
+const emit = defineEmits<{ close: [] }>();
 
 const collapsedMessages = ref<Set<string>>(new Set());
-
-// Format title for modal
-const modalTitle = computed(() => {
-    const title = props.paper.title;
-    return title.length > 60 ? title.substring(0, 60) + "..." : title;
-});
 
 // Toggle message collapse
 function toggleMessage(msgId: string) {
@@ -54,7 +43,7 @@ function renderUsage(
 // Format message content
 function formatMessageContent(msg: Message): string {
     if (msg.role === "assistant") {
-        return `<pre style="margin: 0; white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 0.9em;">${escapeHtml(msg.content)}</pre>`;
+        return `<pre>${escapeHtml(msg.content)}</pre>`;
     }
     return escapeHtml(msg.content);
 }
@@ -91,7 +80,7 @@ onUnmounted(() => {
             <div class="modal-header">
                 <div class="modal-title">
                     <FontAwesomeIcon icon="comments" style="margin-right: 10px" />
-                    LLM Conversations - {{ modalTitle }}
+                    {{ props.paper.title }}
                 </div>
                 <button class="modal-close" @click="emit('close')">
                     <FontAwesomeIcon icon="times" />
@@ -107,7 +96,10 @@ onUnmounted(() => {
                         <span>Stage 1: Quick Screening</span>
                         <span class="stage-score">
                             Score: {{ paper.stage1.score.toFixed(2) }}
-                            {{ paper.stage1.pass ? "✅" : "❌" }}
+                            <FontAwesomeIcon
+                                :icon="paper.stage1.pass ? 'check' : 'xmark'"
+                                :style="{ color: paper.stage1.pass ? '#56ec78' : '#ff5757' }"
+                            />
                         </span>
                     </div>
                     <div
