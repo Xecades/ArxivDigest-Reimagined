@@ -9,7 +9,10 @@ class FilterResult(BaseModel):
     """Base result for paper filtering (LLM output only)."""
 
     score: float = Field(ge=0.0, le=1.0, description="Overall relevance score (0-1)")
-    reasoning: str = Field("", description="Reasoning for the decision (plain text)")
+    reasoning: str = Field(
+        "",
+        description="One-line reasoning for the score decision (Plain text, ~150 Chinese characters or ~80 English words)",
+    )
 
 
 class Stage1Result(FilterResult):
@@ -32,7 +35,7 @@ class Stage3Result(FilterResult):
     # Stage 3 has flexible custom fields defined by user
     custom_fields: dict[str, str] = Field(
         default_factory=dict,
-        description="User-defined custom output fields (markdown with '$'-wrapped LaTeX, no headings/tables/images)",
+        description="User-defined custom output fields (Markdown + KaTeX supported)",
     )
 
     # Common multi-dimensional scores
