@@ -35,7 +35,7 @@ class Stage3Result(FilterResult):
     # Stage 3 has flexible custom fields defined by user
     custom_fields: dict[str, str] = Field(
         default_factory=dict,
-        description="User-defined custom output fields (Markdown + KaTeX supported)",
+        description="User-defined custom output fields (Simple Markdown and '$'-wrapped LaTeX supported)",
     )
 
     # Common multi-dimensional scores

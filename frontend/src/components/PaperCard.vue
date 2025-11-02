@@ -2,6 +2,7 @@
 import { ref, computed } from "vue";
 import type { Paper, BaseStageResult, Stage3Result } from "@/types/digest";
 import { escapeHtml, formatFieldName } from "@/utils/formatters";
+import MarkdownRenderer from "./MarkdownRenderer.vue";
 
 const props = defineProps<{
     paper: Paper;
@@ -145,13 +146,13 @@ const customFields = computed(() => {
 
         <div v-if="mainResult.reasoning" class="reasoning">
             <div class="reasoning-title">Analysis:</div>
-            <div class="reasoning-text" v-html="escapeHtml(mainResult.reasoning)"></div>
+            <MarkdownRenderer :content="mainResult.reasoning" class="reasoning-text" />
         </div>
 
         <div v-if="customFields.length > 0" class="custom-fields">
             <div v-for="[key, value] in customFields" :key="key" class="custom-field">
                 <div class="custom-field-title">{{ formatFieldName(key) }}:</div>
-                <div class="custom-field-content" v-html="escapeHtml(String(value))"></div>
+                <MarkdownRenderer :content="String(value)" class="custom-field-content" />
             </div>
         </div>
 

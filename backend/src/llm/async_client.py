@@ -290,7 +290,7 @@ Paper Information:
 - Categories: {", ".join(categories)}
 
 Full Paper Content (partially truncated):
-{full_text}
+{full_text} (...)
 
 Provide a comprehensive analysis including:
 1. Overall relevance score
