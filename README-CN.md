@@ -2,7 +2,9 @@
 
 [English](README.md) | [中文（机翻）](README-CN.md)
 
-**ArxivDigest-Reimagined** 是一个由大语言模型驱动的智能 arXiv 论文筛选和摘要生成系统。它使用三阶段渐进式筛选流程，帮助研究人员从每日 arXiv 论文中快速识别出与自己研究兴趣相关的论文。（灵感来自 [ArxivDigest](https://github.com/AutoLLM/ArxivDigest)）
+**ArxivDigest-Reimagined** 是一个由大语言模型驱动的智能 arXiv 论文筛选和摘要生成系统。它使用三阶段渐进式筛选流程，帮助研究人员从每日 arXiv 论文中快速识别出与自己研究兴趣相关的论文。（灵感来自 [ArxivDigest](https://github.com/AutoLLM/ArxivDigest)。）
+
+> 在线示例：https://arxiv.xecades.xyz/ （注意：我的研究兴趣比较具体，所以每天可能没有多少第三阶段的论文。如果想要完整体验，建议用你自己的兴趣配置试试看！）
 
 ![](assets/readme-image.png)
 

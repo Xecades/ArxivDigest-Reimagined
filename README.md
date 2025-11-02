@@ -4,6 +4,8 @@
 
 **ArxivDigest-Reimagined** is an intelligent arXiv paper filtering and digest generation system powered by LLMs. It uses a three-stage progressive filtering pipeline to help researchers quickly identify papers relevant to their interests from the daily arXiv feed. (Inspired by [ArxivDigest](https://github.com/AutoLLM/ArxivDigest).)
 
+> Live example: https://arxiv.xecades.xyz/ (Note: My research interests are quite specific, so there may not be many Stage 3 papers daily. For a complete experience, try customizing the config with your own interests!)
+
 ![](assets/readme-image.png)
 
 ## 🌟 Features
