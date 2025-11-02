@@ -44,6 +44,10 @@
         - Name: `CONFIG_YAML`
         - Value: 复制 [`backend/config_example.yaml`](backend/config_example.yaml) 的全部内容，并根据你的研究兴趣进行自定义（详见[配置说明](#-配置说明)）
         - 保存变量
+    - **添加变量** `BASE_URL`（可选）：
+        - 仅在部署到自定义域名或非根路径时需要
+        - 示例：`/my-digest/` 或 `/`
+        - 如果不设置，将自动使用 `/<仓库名>/`（例如 `/ArxivDigest-Reimagined/`）
 
 3. **配置工作流**（可选）：
 

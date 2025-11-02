@@ -44,6 +44,10 @@
         - Name: `CONFIG_YAML`
         - Value: Copy the entire content of [`backend/config_example.yaml`](backend/config_example.yaml) and customize it with your research interests (see [Configuration](#-configuration) for details)
         - Save the variable
+    - **Add a variable** named `BASE_URL` (optional):
+        - Only needed if you're deploying to a custom domain or non-root path
+        - Example: `/my-digest/` or `/`
+        - If not set, it will automatically use `/<repository-name>/` (e.g., `/ArxivDigest-Reimagined/`)
 
 3. **Configure the workflow** (optional):
 
