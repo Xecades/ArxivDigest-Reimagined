@@ -129,6 +129,11 @@ npm run preview
 ```yaml
 arxiv:
     field: "cs" # arXiv 领域（cs, math, physics 等）
+    # 也可以指定多个领域：
+    # field:
+    #   - "cs"
+    #   - "math"
+    #   - "stat"
     categories:
         - "Computer Vision and Pattern Recognition"
         - "Artificial Intelligence"

@@ -129,6 +129,11 @@ The configuration file controls all aspects of paper filtering and analysis.
 ```yaml
 arxiv:
     field: "cs" # arXiv field (cs, math, physics, etc.)
+    # You can also specify multiple fields:
+    # field:
+    #   - "cs"
+    #   - "math"
+    #   - "stat"
     categories:
         - "Computer Vision and Pattern Recognition"
         - "Artificial Intelligence"

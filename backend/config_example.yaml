@@ -5,6 +5,11 @@
 # ============================================
 arxiv:
   field: "cs" # arXiv field abbreviation (check https://arxiv.org/ for field codes)
+  # You can also specify multiple fields:
+  # field:
+  #   - "cs"
+  #   - "math"
+  #   - "stat"
   categories:
     - "Computer Vision and Pattern Recognition"
     - "Artificial Intelligence"

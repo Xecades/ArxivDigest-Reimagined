@@ -6,18 +6,16 @@ from bs4 import BeautifulSoup
 from loguru import logger
 
 
-def fetch_arxiv_papers(
+def _fetch_from_single_field(
+    field: str,
     categories: list[str] | None = None,
-    field: str = "cs",
-    max_results: int = 0,
 ) -> list[dict]:
     """
-    Fetch new papers from arXiv.
+    Fetch papers from a single arXiv field.
 
     Args:
-        categories: List of category names to filter (e.g., ["Computer Vision and Pattern Recognition"])
-        field: arXiv field abbreviation (default: "cs" for Computer Science)
-        max_results: Maximum number of papers to return (0 = no limit)
+        field: arXiv field abbreviation (e.g., "cs", "math", "physics")
+        categories: List of category names to filter
 
     Returns:
         List of paper dicts with keys: id, title, authors, categories, abstract, url
@@ -29,30 +27,30 @@ def fetch_arxiv_papers(
         with urllib.request.urlopen(url) as page:
             soup = BeautifulSoup(page, features="html.parser")
     except Exception as e:
-        logger.error(f"Failed to fetch papers from arXiv: {e}")
+        logger.error(f"Failed to fetch papers from arXiv field '{field}': {e}")
         return []
 
     if not soup.body:
-        logger.error("Could not find body in arXiv page")
+        logger.error(f"Could not find body in arXiv page for field '{field}'")
         return []
 
     content = soup.body.find("div", {"id": "content"})
     if not content:
-        logger.error("Could not find content div in arXiv page")
+        logger.error(f"Could not find content div in arXiv page for field '{field}'")
         return []
 
     # Extract date
     h3 = content.find("h3")
     if h3:
         date_str = h3.text.replace("New submissions for", "").strip()
-        logger.info(f"Papers date: {date_str}")
+        logger.debug(f"Papers date for field '{field}': {date_str}")
 
     # Find all paper entries
     dt_list = content.dl.find_all("dt") if content.dl else []
     dd_list = content.dl.find_all("dd") if content.dl else []
 
     if len(dt_list) != len(dd_list):
-        logger.error("Mismatch between dt and dd elements")
+        logger.error(f"Mismatch between dt and dd elements for field '{field}'")
         return []
 
     papers = []
@@ -114,13 +112,56 @@ def fetch_arxiv_papers(
 
             papers.append(paper)
 
-            # Check max_results limit
-            if max_results > 0 and len(papers) >= max_results:
-                break
-
         except Exception as e:
-            logger.warning(f"Error parsing paper: {e}")
+            logger.warning(f"Error parsing paper in field '{field}': {e}")
             continue
 
-    logger.info(f"Fetched {len(papers)} papers from arXiv")
+    logger.info(f"Fetched {len(papers)} papers from arXiv field '{field}'")
+    return papers
+
+
+def fetch_arxiv_papers(
+    categories: list[str] | None = None,
+    field: str | list[str] = "cs",
+    max_results: int = 0,
+) -> list[dict]:
+    """
+    Fetch new papers from arXiv.
+
+    Args:
+        categories: List of category names to filter (e.g., ["Computer Vision and Pattern Recognition"])
+        field: arXiv field abbreviation(s). Can be a single string (e.g., "cs") or a list (e.g., ["cs", "math"])
+        max_results: Maximum number of papers to return (0 = no limit)
+
+    Returns:
+        List of paper dicts with keys: id, title, authors, categories, abstract, url
+    """
+    # Normalize field to list
+    fields = [field] if isinstance(field, str) else field
+
+    logger.info(f"Fetching papers from fields: {fields}")
+
+    # Fetch papers from all fields and deduplicate by paper ID
+    papers_dict: dict[str, dict] = {}
+
+    for single_field in fields:
+        field_papers = _fetch_from_single_field(single_field, categories)
+
+        for paper in field_papers:
+            paper_id = paper["id"]
+            # Only add if not already present (first field wins)
+            if paper_id not in papers_dict:
+                papers_dict[paper_id] = paper
+
+            # Check max_results limit
+            if max_results > 0 and len(papers_dict) >= max_results:
+                break
+
+        # Early exit if max_results reached
+        if max_results > 0 and len(papers_dict) >= max_results:
+            break
+
+    papers = list(papers_dict.values())
+    logger.info(f"Total unique papers fetched: {len(papers)}")
+
     return papers
