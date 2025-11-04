@@ -91,13 +91,23 @@ def _fetch_from_single_field(
             abstract = abstract_tag.text.strip() if abstract_tag else ""
 
             # Filter by categories if specified
-            if categories:
-                # Check if any of the paper's categories match the filter
-                category_match = any(
-                    any(filter_cat.lower() in paper_cat.lower() for paper_cat in paper_categories)
-                    for filter_cat in categories
-                )
-                if not category_match:
+            # If categories is None or empty, don't filter (fetch all papers from the field)
+            if categories is None:
+                categories = []
+            if len(categories) > 0:
+                # Only filter if paper has categories and any match the filter
+                if paper_categories:
+                    category_match = any(
+                        any(
+                            filter_cat.lower() in paper_cat.lower()
+                            for paper_cat in paper_categories
+                        )
+                        for filter_cat in categories
+                    )
+                    if not category_match:
+                        continue
+                else:
+                    # Paper has no categories but filter is specified, skip it
                     continue
 
             paper = {

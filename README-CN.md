@@ -137,6 +137,8 @@ arxiv:
     categories:
         - "Computer Vision and Pattern Recognition"
         - "Artificial Intelligence"
+    # 如果要获取领域内的所有论文而不按类别过滤：
+    # categories: []
     max_results: 0 # 0 = 不限制数量
 
 llm:

@@ -100,12 +100,16 @@ class JSONExporter:
         stage3_config = config.get("stage3", {})
         highlight_config = config.get("highlight", {})
 
+        categories = arxiv_config.get("categories", [])
+        if categories is None:
+            categories = []
+
         return {
             "title": title,
             "timestamp": datetime.now().isoformat(),
             "user_prompt": config.get("user_prompt", ""),
             "arxiv_config": {
-                "categories": arxiv_config.get("categories", []),
+                "categories": categories,
                 "max_results": arxiv_config.get("max_results", 0),
             },
             "llm_config": {

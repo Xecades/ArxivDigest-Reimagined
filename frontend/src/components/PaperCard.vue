@@ -73,7 +73,7 @@ const customFields = computed(() => {
                 <strong><FontAwesomeIcon icon="users" class="meta-icon" />Authors:</strong>
                 {{ paper.authors.join(", ") }}
             </div>
-            <div class="categories">
+            <div v-if="paper.categories.length > 0" class="categories">
                 <strong><FontAwesomeIcon icon="tags" class="meta-icon" />Categories:</strong>
                 <span v-for="cat in paper.categories" :key="cat" class="category-tag">
                     {{ cat }}

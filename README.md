@@ -137,6 +137,8 @@ arxiv:
     categories:
         - "Computer Vision and Pattern Recognition"
         - "Artificial Intelligence"
+    # To fetch ALL papers from the field(s) without category filtering:
+    # categories: []
     max_results: 0 # 0 = no limit
 
 llm:
