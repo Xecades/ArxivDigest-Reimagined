@@ -1,7 +1,7 @@
 """JSON exporter for digest data."""
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -106,7 +106,7 @@ class JSONExporter:
 
         return {
             "title": title,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "user_prompt": config.get("user_prompt", ""),
             "arxiv_config": {
                 "categories": categories,

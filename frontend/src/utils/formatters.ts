@@ -30,11 +30,18 @@ export function formatCost(cost: number | null | undefined): string {
 }
 
 /**
- * Format date from ISO string
+ * Format date from ISO string to user's local timezone
  */
 export function formatDate(isoString: string): string {
     try {
         const date = new Date(isoString);
+
+        // Check if date is valid
+        if (isNaN(date.getTime())) {
+            return isoString;
+        }
+
+        // Format in user's local timezone with consistent format
         return date.toLocaleString("en-US", {
             year: "numeric",
             month: "2-digit",
