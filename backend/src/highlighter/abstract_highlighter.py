@@ -12,10 +12,9 @@ class HighlightResult(BaseModel):
     """Result from abstract highlighting."""
 
     highlighted_text: str = Field(
-        description="The abstract with key points highlighted using **markdown bold**. "
-        "Only highlight the most important technical terms, methods, results, and contributions. "
-        "Keep the highlighting selective - typically 10-20% of the text should be bold. "
-        "Do NOT change the original text, only add ** around key phrases."
+        description="The abstract with key points highlighted using **markdown bold**, "
+        "and LaTeX math expressions fixed to use proper markdown-it-katex compatible delimiters "
+        "($...$ for inline math, $$...$$ for display math)."
     )
 
 
@@ -120,18 +119,22 @@ class AbstractHighlighter:
         Returns:
             System prompt string
         """
-        base_prompt = """You are a scientific paper analyzer. Your task is to highlight the most important parts of a paper abstract using **markdown bold**.
+        base_prompt = """You are a scientific paper analyzer. Your task is to:
+1. Highlight the most important parts of a paper abstract using **markdown bold**
+2. Fix LaTeX math expressions to ensure proper rendering in markdown
 
 Highlight guidelines:
-1. Focus on: novel methods, key techniques, main results, significant contributions, and important technical terms
-2. Be selective: Only 10-20% of the text should be bolded
-3. Do NOT modify the original text - only add ** markers around key phrases
-4. Maintain all original punctuation and spacing
-5. Avoid over-highlighting common words like "we", "this", "paper", etc.
+- Do NOT change the original text content, only add ** around key phrases
+- Focus on: novel methods, key techniques, main results, and significant contributions
+
+LaTeX fixing guidelines:
+- Use $ or $$ for math delimiters
+- Preserve all mathematical content exactly
+- If no LaTeX is present, simply return the highlighted text
 """
 
-        if user_context:
-            base_prompt += f"\nUser's research interest and requirements: {user_context}\nPrioritize highlighting content relevant to this interest."
+        # if user_context:
+        #     base_prompt += f"\n\nUser's research interest and requirements: {user_context}\nPrioritize highlighting content relevant to this interest."
 
         return base_prompt
 
