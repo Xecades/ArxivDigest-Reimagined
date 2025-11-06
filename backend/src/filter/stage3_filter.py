@@ -50,9 +50,6 @@ class Stage3Filter:
         self.custom_fields = custom_fields or []
         self.config_hash = config_hash
 
-        # HTML cleaner for text extraction
-        self.html_cleaner = ArxivHtmlCleaner(max_chars=max_text_chars)
-
         # Extract field names for logging
         field_names = [f.get("name", "") for f in self.custom_fields if f.get("name")]
 
@@ -60,6 +57,20 @@ class Stage3Filter:
             f"Stage3Filter initialized: threshold={threshold}, temperature={temperature}, "
             f"max_chars={max_text_chars}, custom_fields={field_names}"
         )
+
+    def _extract_text_from_html(self, html: str, arxiv_id: str) -> str:
+        """
+        Extract text from HTML with arxiv_id for image URL resolution.
+
+        Args:
+            html: Raw HTML content
+            arxiv_id: arXiv paper ID
+
+        Returns:
+            Cleaned text with resolved image URLs
+        """
+        cleaner = ArxivHtmlCleaner(max_chars=self.max_text_chars, arxiv_id=arxiv_id)
+        return cleaner.clean(html)
 
     async def filter_batch(
         self,
@@ -106,7 +117,7 @@ class Stage3Filter:
             for paper in uncached_papers:
                 html = html_results.get(paper["id"])
                 if html:
-                    full_text = self.html_cleaner.clean(html)
+                    full_text = self._extract_text_from_html(html, paper["id"])
                     papers_with_text.append((paper, full_text))
                 else:
                     # Add to results with None
