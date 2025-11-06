@@ -11,14 +11,16 @@ from loguru import logger
 class ArxivHtmlCleaner:
     """Extract clean text from arXiv HTML format papers."""
 
-    def __init__(self, max_chars: int | None = None):
+    def __init__(self, max_chars: int | None = None, arxiv_id: str | None = None):
         """
         Initialize the HTML cleaner.
 
         Args:
             max_chars: Maximum characters to extract (None = no limit)
+            arxiv_id: arXiv paper ID for resolving relative image URLs
         """
         self.max_chars = max_chars
+        self.arxiv_id = arxiv_id
 
         # Tags to remove completely
         self.tags_to_remove = [
@@ -259,15 +261,31 @@ class ArxivHtmlCleaner:
 
     def _handle_figure(self, tag: Tag) -> str:
         """Handle figure tags."""
+        result_parts = []
+
+        # Extract image URL if present
+        img_tag = tag.find("img")
+        if img_tag and self.arxiv_id:
+            img_src = img_tag.get("src")
+            if img_src and isinstance(img_src, str):
+                # Convert relative URL to absolute URL
+                img_url = self._resolve_image_url(img_src)
+                if img_url:
+                    result_parts.append(f"![]({img_url})")
+
+        # Extract caption
         caption = tag.find("figcaption")
         if caption:
             caption_text = self._extract_text_from_element(caption)
             if caption_text:
                 # Check if caption already starts with "Figure" or "Table"
                 if caption_text.startswith(("Figure", "Table")):
-                    return f"\n[{caption_text}]\n"
+                    result_parts.append(f"[{caption_text}]")
                 else:
-                    return f"\n[Figure: {caption_text}]\n"
+                    result_parts.append(f"[Figure: {caption_text}]")
+
+        if result_parts:
+            return "\n" + "\n".join(result_parts) + "\n"
         return ""
 
     def _handle_math(self, tag: Tag) -> str:
@@ -420,6 +438,30 @@ class ArxivHtmlCleaner:
                 return f"[Table: {caption}]\n" + "\n".join(rows)
         else:
             return "[Table]\n" + "\n".join(rows)
+
+    def _resolve_image_url(self, img_src: str) -> str | None:
+        """
+        Resolve relative image URL to absolute URL.
+
+        Args:
+            img_src: Image source path (relative or absolute)
+
+        Returns:
+            Absolute URL or None if cannot resolve
+        """
+        if not self.arxiv_id:
+            return None
+
+        # If already absolute URL, return as is
+        if img_src.startswith(("http://", "https://")):
+            return img_src
+
+        # Remove leading slashes and "extracted/" prefix if present
+        img_src = img_src.lstrip("/")
+
+        # Build absolute URL: https://arxiv.org/html/{arxiv_id}/{img_src}
+        base_url = f"https://arxiv.org/html/{self.arxiv_id}"
+        return f"{base_url}/{img_src}"
 
     def _normalize_whitespace(self, text: str) -> str:
         """

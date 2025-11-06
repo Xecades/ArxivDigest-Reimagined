@@ -284,6 +284,14 @@ Provide multi-dimensional scores and extract specific information as requested."
                 custom_fields_prompt = "\n\nExtract the following custom fields:\n" + "\n".join(
                     fields_list
                 )
+                custom_fields_prompt += (
+                    "\n\nNote: The paper content includes image URLs in markdown format (![](url)). "
+                    "Although you cannot view the images directly, you may include relevant figure markdown "
+                    "in your custom field responses when necessary, especially if the context suggests the "
+                    "figure would be valuable for users to see. However, please be selective - only include "
+                    "figures that are truly essential to understanding your extracted information. "
+                    "In most cases, only an image describing the methodology is needed."
+                )
 
         user_message = f"""User's interests: {user_prompt}
 
