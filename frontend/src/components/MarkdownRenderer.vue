@@ -3,6 +3,7 @@ import { ref, onMounted, watch } from "vue";
 import MarkdownIt from "markdown-it";
 import markdownItKatex from "markdown-it-katex";
 import markdownItPangu from "markdown-it-pangu-ts";
+import markdownItCjkFriendly from "markdown-it-cjk-friendly";
 
 const props = withDefaults(
     defineProps<{
@@ -25,7 +26,8 @@ const md = new MarkdownIt({
         throwOnError: false,
         errorColor: "#cc0000",
     })
-    .use(markdownItPangu);
+    .use(markdownItPangu)
+    .use(markdownItCjkFriendly);
 
 function renderMarkdown() {
     try {
