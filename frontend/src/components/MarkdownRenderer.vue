@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from "vue";
 import MarkdownIt from "markdown-it";
-import markdownItKatex from "markdown-it-katex";
+import markdownItKatex from "@vscode/markdown-it-katex";
 import markdownItPangu from "markdown-it-pangu-ts";
 import markdownItCjkFriendly from "markdown-it-cjk-friendly";
 
@@ -303,11 +303,12 @@ watch(
     overflow-x: auto;
     overflow-y: hidden;
     padding: 0.5em 0;
+    font-size: 1.1em;
 }
 
 /* Inline KaTeX */
 .markdown-renderer .katex {
-    font-size: 1.05em;
+    font-size: 1.13em;
 }
 
 /* Task lists */
