@@ -169,16 +169,16 @@ watch(
     background-color: transparent;
     border: none;
     padding: 0;
-    color: #1a202c;
+    color: var(--text-color);
     font-size: 0.9em;
 }
 
 /* Blockquotes */
 .markdown-renderer blockquote {
-    border-left: 4px solid #667eea;
+    border-left: 4px solid var(--accent-color);
     padding-left: 1em;
     margin: 1em 0;
-    color: #4a5568;
+    color: var(--secondary-text-color);
     background-color: #f7fafc;
     padding: 0.8em 1em;
     border-radius: 0 4px 4px 0;
@@ -190,13 +190,13 @@ watch(
 
 /* Links */
 .markdown-renderer a {
-    color: #667eea;
+    color: var(--accent-color);
     text-decoration: none;
     transition: color 0.2s ease;
 }
 
 .markdown-renderer a:hover {
-    color: #5a67d8;
+    color: var(--accent-hover);
     text-decoration: underline;
 }
 

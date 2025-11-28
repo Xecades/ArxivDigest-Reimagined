@@ -166,7 +166,7 @@ const customFields = computed(() => {
     width: 16px;
     line-height: 1em;
     text-align: center;
-    color: #667eea;
+    color: var(--accent-color);
     vertical-align: middle;
 }
 </style>
