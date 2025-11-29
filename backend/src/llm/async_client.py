@@ -291,17 +291,20 @@ Provide multi-dimensional scores and extract specific information as requested."
                     "figure would be valuable for users to see. However, please be selective - only include "
                     "figures that are truly essential to understanding your extracted information. "
                     "In most cases, only an image describing the methodology is needed."
+                    "\n\nAdditional Instruction: Ensure the output is scannable and reader-friendly. "
+                    "Avoid overusing paper-specific terms without explanation. Use bullet points or short "
+                    "paragraphs for clarity."
                 )
 
-        user_message = f"""User's interests: {user_prompt}
-
-Paper Information:
+        user_message = f"""Paper Information:
 - Title: {title}
 - Authors: {", ".join(authors)}
 - Categories: {", ".join(categories)}
 
 Full Paper Content (partially truncated):
 {full_text} (...)
+
+User's interests: {user_prompt}
 
 Provide a comprehensive analysis including:
 1. Overall relevance score
