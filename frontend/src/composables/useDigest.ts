@@ -54,12 +54,16 @@ export function useDigest() {
 
     // Handle date change from navigator
     const handleDateChange = (newDate: string) => {
-        if (newDate === latestDateString.value) {
-            selectedDate.value = "";
-        } else if (historyDates.value.includes(newDate)) {
+        if (historyDates.value.length > 0) {
+            // If history exists, we rely on it.
             selectedDate.value = newDate;
         } else {
-            selectedDate.value = ""; // Default to latest
+            // Fallback mode: if no history, we might be using digest.json
+            if (newDate === latestDateString.value) {
+                selectedDate.value = "";
+            } else {
+                selectedDate.value = ""; // Default to latest
+            }
         }
     };
 
@@ -75,10 +79,21 @@ export function useDigest() {
         // Sort dates descending (newest first)
         historyDates.value.sort((a, b) => b.localeCompare(a));
 
-        // Load latest data
-        await loadData();
-        if (digestData.value) {
-            latestDateString.value = formatDateFromTimestamp(digestData.value.metadata.timestamp);
+        if (historyDates.value.length > 0) {
+            // If history exists, use the latest history file as the source of truth
+            const latest = historyDates.value[0];
+            if (latest) {
+                selectedDate.value = latest;
+                latestDateString.value = latest;
+            }
+        } else {
+            // Fallback: Load digest.json if no history is available
+            await loadData();
+            if (digestData.value) {
+                latestDateString.value = formatDateFromTimestamp(
+                    digestData.value.metadata.timestamp,
+                );
+            }
         }
     });
 
