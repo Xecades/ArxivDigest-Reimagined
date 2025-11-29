@@ -11,6 +11,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  actions: read
 
 # Allow only one concurrent deployment
 concurrency:
@@ -52,12 +53,42 @@ jobs:
         run: |
           uv run main.py
 
-      - name: Download history artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: digest-history
-          path: digest-history
-        continue-on-error: true
+      - name: Download history artifact from previous run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Find latest successful run
+          RUN_ID=$(gh api repos/${{ github.repository }}/actions/workflows/daily-digest.yml/runs \
+            --jq '.workflow_runs[] | select(.conclusion=="success") | .id' \
+            | head -n 1)
+
+          if [ -z "$RUN_ID" ]; then
+            echo "No previous successful runs found. Skipping history download."
+            exit 0
+          fi
+
+          echo "Found previous run: $RUN_ID"
+
+          # Find artifact ID
+          ARTIFACT_ID=$(gh api repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts \
+            --jq '.artifacts[] | select(.name=="digest-history") | .id')
+
+          if [ -z "$ARTIFACT_ID" ]; then
+            echo "No 'digest-history' artifact found in run $RUN_ID. Skipping."
+            exit 0
+          fi
+
+          echo "Found artifact ID: $ARTIFACT_ID"
+
+          # Download artifact
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            repos/${{ github.repository }}/actions/artifacts/$ARTIFACT_ID/zip \
+            > digest-history.zip
+
+          # Unzip
+          unzip digest-history.zip -d digest-history
+          rm digest-history.zip
 
       - name: Archive digest and update history
         run: |
