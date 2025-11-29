@@ -52,6 +52,24 @@ jobs:
         run: |
           uv run main.py
 
+      - name: Download history artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: digest-history
+          path: digest-history
+        continue-on-error: true
+
+      - name: Archive digest and update history
+        run: |
+          python3 scripts/archive_digest.py
+
+      - name: Upload history artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest-history
+          path: digest-history
+          retention-days: 90
+
       - name: Upload digest.json as artifact
         uses: actions/upload-artifact@v4
         with:
@@ -72,6 +90,13 @@ jobs:
         with:
           name: digest-json
           path: frontend/public/
+
+      - name: Download history artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: digest-history
+          path: frontend/public/
+        continue-on-error: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
