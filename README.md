@@ -16,7 +16,7 @@
     -   **Stage 3**: Deep analysis using full paper content from arXiv HTML
 -   **Smart Abstract Highlighting**: Automatically highlights key points in abstracts using LLM
 -   **Rich Paper Analysis**: Extracts novelty, impact, quality scores, and custom fields
--   **Author Subscriptions**: A separate "Subscribed Authors" tab lists recent papers by authors you follow, straight from the arXiv API (no LLM cost)
+-   **Author Subscriptions**: A separate "Subscribed" tab lists recent papers by authors you follow, straight from the arXiv API (no LLM cost)
 
 ## 📦 Requirements
 

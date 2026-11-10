@@ -20,7 +20,7 @@ arxiv:
 # ============================================
 # Author Subscriptions
 # ============================================
-# Recent papers by these authors appear in the site's "Subscribed Authors" tab,
+# Recent papers by these authors appear in the site's "Subscribed" tab,
 # regardless of the LLM filter (no API cost: this uses the plain arXiv API).
 # Use the name exactly as it appears on arXiv. For common names, add
 # "categories" to only match papers cross-listed there, which filters out

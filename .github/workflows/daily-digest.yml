@@ -136,7 +136,7 @@ jobs:
           path: frontend/public/
         continue-on-error: true
 
-      # Without this file the site just hides the Subscribed Authors tab.
+      # Without this file the site just hides the Subscribed tab.
       - name: Download authors.json artifact
         uses: actions/download-artifact@v4
         with:

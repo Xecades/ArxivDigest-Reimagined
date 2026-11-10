@@ -81,7 +81,7 @@ onMounted(async () => {
                 @click="setView('authors')"
             >
                 <FontAwesomeIcon icon="users" />
-                Subscribed Authors ({{ authorFeed.papers.length }})
+                Subscribed ({{ authorFeed.papers.length }})
             </button>
         </nav>
 
